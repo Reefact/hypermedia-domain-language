@@ -1,5 +1,5 @@
 # Collection
 
-  * [Pagination](doc/pagination.md)
-  * [Tri](doc/sorting.md)
-  * [Recherche](doc/search.md)
+  * [Pagination](pagination.md)
+  * [Tri](sorting.md)
+  * [Recherche](search.md)
