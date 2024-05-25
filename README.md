@@ -110,4 +110,6 @@ HDL est conçu pour évoluer avec les besoins des utilisateurs et des développe
 
 ## Documentation du foramat HDL
 
-* [pagination](doc/pagination.md)
+* [Collections](doc/collection.md)
+  * [Pagination](doc/pagination.md)
+  * [Tri](doc/sorting.md)
