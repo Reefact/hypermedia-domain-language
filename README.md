@@ -113,3 +113,4 @@ HDL est conçu pour évoluer avec les besoins des utilisateurs et des développe
 * [Collections](doc/collection.md)
   * [Pagination](doc/pagination.md)
   * [Tri](doc/sorting.md)
+  * [Recherche](doc/search.md)
