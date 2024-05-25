@@ -75,6 +75,11 @@ Les liens de pagination sont des hyperliens standard qui utilisent les relations
 }
 ```
 
+Si un lien de pagination n'est pas navigable, il ne doit pas apparaître. Par exemple:
+
+- si l'utilisateur est sur la page 1 et qu'il y a 10 pages au total, seuls `self`, `first`, `next`, et `last` doivent apparaître
+- si la collection ne contient qu'une seule page, seuls `self`, `first`, et `last` doivent apparaître
+
 ### Métadonnées de Pagination
 
 Les métadonnées fournissent un contexte clair sur la taille de la collection et la position actuelle dans la pagination. Par exemple :
@@ -142,6 +147,11 @@ Les liens de pages environnantes (span) sont déterminés par la valeur de la m�
   ]
 }
 ```
+
+
+De même que précédemment, si un lien de pagination n'est pas navigable, il ne doit pas apparaître. Par exemple:
+
+- si l'utilisateur est sur la page 1, qu'il y a 10 pages au total et que le span est a 3, seuls `self`, `first`, `next`, `last`, ainsi que les `pages` 2, 3, et 4 doivent apparaître
 
 ## Mise en Application Complète
 
