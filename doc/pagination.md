@@ -1,4 +1,4 @@
-# DPagination
+# Pagination
 
 ## Introduction
 
