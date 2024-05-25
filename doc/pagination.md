@@ -1,4 +1,4 @@
-# Documentation de la Pagination dans Hypermedia Domain Language (HDL)
+# Pagination
 
 ## Introduction
 
@@ -98,23 +98,14 @@ Les métadonnées fournissent un contexte clair sur la taille de la collection e
 
 ### Liens de Pages avec Span
 
-Les liens de pages environnantes (span) sont déterminés par la valeur de la métadonnée `span`. Par exemple, si `currentPage` est 50 et `span` est 5, les liens incluront les pages 45 à 49 et 51 à 55 :
+Les liens de pages environnantes (span) sont déterminés par la valeur de la métadonnée `span`. Par exemple, si `currentPage` est 50 et `span` est 3, les liens incluront les pages 47 à 49 et 51 à 53 :
 
 ```json
 {
   "pages": [
     {
-      "name": "45",
-      "href": "http://example.com/articles?page=45"
-    },
-    {
-      "name": "46",
-      "href": "http://example.com/articles?page=46"
-    },
-    {
       "name": "47",
-      "href": "http://example.com/articles?page=47",
-      "name": "47"
+      "href": "http://example.com/articles?page=47"
     },
     {
       "name": "48",
@@ -135,14 +126,6 @@ Les liens de pages environnantes (span) sont déterminés par la valeur de la m�
     {
       "name": "53",
       "href": "http://example.com/articles?page=53"
-    },
-    {
-      "name": "54",
-      "href": "http://example.com/articles?page=54"
-    },
-    {
-      "name": "55",
-      "href": "http://example.com/articles?page=55"
     }
   ]
 }
@@ -187,47 +170,30 @@ Voici un exemple complet de la pagination dans HDL, incluant les liens de pagina
     "next": { "href": "http://example.com/articles?page=51" },
     "last": { "href": "http://example.com/articles?page=100" },
     "pages": [
-        {
-        "name": "45",
-        "href": "http://example.com/articles?page=45"
-        },
-        {
-        "name": "46",
-        "href": "http://example.com/articles?page=46"
-        },
-        {
+      {
         "name": "47",
-        "href": "http://example.com/articles?page=47",
-        "name": "47"
-        },
-        {
+        "href": "http://example.com/articles?page=47"
+      },
+      {
         "name": "48",
         "href": "http://example.com/articles?page=48"
-        },
-        {
+      },
+      {
         "name": "49",
         "href": "http://example.com/articles?page=49"
-        },
-        {
+      },
+      {
         "name": "51",
         "href": "http://example.com/articles?page=51"
-        },
-        {
+      },
+      {
         "name": "52",
         "href": "http://example.com/articles?page=52"
-        },
-        {
+      },
+      {
         "name": "53",
         "href": "http://example.com/articles?page=53"
-        },
-        {
-        "name": "54",
-        "href": "http://example.com/articles?page=54"
-        },
-        {
-        "name": "55",
-        "href": "http://example.com/articles?page=55"
-        }
+      }
     ]
   },
   "pagination": {
@@ -235,7 +201,7 @@ Voici un exemple complet de la pagination dans HDL, incluant les liens de pagina
     "pageSize": 10,
     "currentPage": 50,
     "totalPages": 100,
-    "span": 5
+    "span": 3
   }
 }
 ```
