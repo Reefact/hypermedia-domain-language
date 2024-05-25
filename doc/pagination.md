@@ -1,4 +1,4 @@
-# Documentation de la Pagination dans Hypermedia Domain Language (HDL)
+# DPagination
 
 ## Introduction
 
