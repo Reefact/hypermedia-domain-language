@@ -8,19 +8,99 @@ Là où d'autres formats imposent une restructuration complète des contrats API
 
 Le Hypermedia Domain Language propose une approche intégrée des principes HATEOAS pour les API RESTful, en enrichissant les structures JSON traditionnelles sans les compliquer. HDL facilite une navigation dynamique et intuitive, permettant des interactions plus claires et plus directes à travers les applications. C’est une option pratique pour ceux qui cherchent à adopter HATEOAS tout en maintenant la simplicité et l’efficacité de leurs interfaces API.
 
+## Pourquoi HDL ?
+
+Bien que particulièrement puissant et remontant aux années 2000, le concept HATEOAS n'a pas été largement adopté dans l'implémentation des API REST pour plusieurs raisons. Premièrement, sa mise en œuvre peut s'avérer complexe et peut demander une conception initiale plus réfléchie, ce qui dissuade souvent les développeurs habitués à des approches plus simples. De plus, le manque de support des outils et des bibliothèques pour faciliter l'intégration de HATEOAS dans les API existantes constitue un autre obstacle notable.
+
+Dans ce contexte, HDL se présente comme une version simplifiée et extensible qui permet aux développeurs d'adopter progressivement les principes de HATEOAS. Cette approche offre une transition en douceur vers des architectures basées sur l'hypermedia, tout en conservant une structure plus traditionnelle pour la représentation des ressources. HDL vise ainsi à réduire la courbe d'apprentissage et à encourager une intégration plus large de HATEOAS dans le développement des API modernes.
+
 ## Caractéristiques Principales de HDL
 
-### Représentation des Objets et Termes Métiers
+HDL se propose de formaliser les ressources, les collection de ressources, ainsi que les erreurs dans un format le plus clair possible et le plus proche du métier possible.
 
-HDL se distingue par sa capacité à utiliser des termes et des concepts métiers pour nommer les affordances et les ressources. Cela facilite la communication et l'alignement avec l'ubiquitous language, unifiant ainsi les développeurs et les experts métiers autour d'une terminologie commune. En représentant les objets métiers de manière claire et compréhensible, HDL améliore la lisibilité des API, permettant à tous les utilisateurs de comprendre et d'interagir efficacement avec les ressources disponibles. Cette approche réduit la courbe d'apprentissage et améliore la collaboration entre les équipes techniques et non techniques.
+### Formalisation des ressources
 
-### Flexibilité et Richesse des Interactions
+Voici un exemple de ressource REST écrite de façon "traditionnelle":
 
-HDL offre une grande flexibilité grâce à l'utilisation de templates URI, permettant la génération dynamique des URLs en fonction des paramètres. Cela permet de gérer efficacement les interactions avec les API, en offrant des options variées sans complexifier la structure. Les affordances dans HDL vont au-delà de la simple navigation, en décrivant également les actions disponibles sur les ressources, incluant les méthodes HTTP et les types de médias. Cette description riche des actions permet une interaction plus complète et intuitive avec les API.
+```json
+{
+  "property1": "value1",
+  "property2": "value2",
+  "property3": "value3",
+  "subResource": {
+    "subProperty1": "subValue1"
+  }
+}
+```
 
-En outre, HDL gère efficacement la dépréciation des liens hypermedia. Les liens peuvent inclure une propriété `deprecation` pour indiquer les affordances obsolètes et fournir des alternatives, assurant une transition en douceur sans casser la compatibilité. Cette gestion proactive des dépréciations aide à maintenir l'intégrité et la robustesse de l'API au fil du temps.
+HDL permet d'étendre cette ressource sans casser son contrat:
+
+```json
+{
+  "property1": "value1",
+  "property2": "value2",
+  "property3": "value3",
+  "subResource": {
+    "subProperty1": "subValue1",
+    "_links": {
+      "self": {
+        "href": "http://example.com/resources/656/subResources/uy"
+      }
+    }
+  },
+  "_links": {
+    "self": { "href": "http://example.com/resources/656" }
+  },
+  "_metadata": {
+    "hreflang": "fr-FR"
+  }
+}
+```
+
+Voir: [Formalisation des ressources](doc/resources.md), [Hyperliens](doc/hyperlinks.md)
+
+### Collection
+
+HDL défini un format pour les collection de ressource.
+
+```json
+{
+  "items": [
+    // the resource collection
+  ],
+  "pagination": {
+    // pagination data
+  },
+  "sort": {
+    // sorting data
+  },
+  "filter": {
+    // filtering data
+  },
+  "search": {
+    // search data
+  }
+
+}
+```
+
+Voir: [Collections](doc/collection.md)
+
+### Erreurs
+
+HDL défini également un format pour les retours en erreur:
+
+```json
+{
+  "message": "Payment refused."
+}
+```
+
+Voir: [Erreurs](doc/errors.md)
 
 ## Comparaison avec d'Autres Formats
+
+HDL s'inspire largement d'autres implémentation de HATEOAS tou en essayant de conserver son objetif principal: un format simple et extensible orienté domaine.
 
 ### JSON:API
 
@@ -48,8 +128,7 @@ Voici un exemple de ressource HDL montrant la structure de base et l'utilisation
     "name": "John Doe",
     "_links": {
       "self": {
-        "href": "http://example.com/authors/9",
-        "title": "Author Details"
+        "href": "http://example.com/authors/9"
       }
     }
   },
