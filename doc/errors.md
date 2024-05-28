@@ -51,13 +51,11 @@ L'objet `httpResponse` contient les informations liées à l'état HTTP de la r�
 
 **Exemple de propriété `httpResponse`**
 ```json
-{
   "httpResponse": {
     "status": 422,
     "title": "Unprocessable Entity",
     "message": "The request was well-formed but was unable to be followed due to business errors."
   }
-}
 ```
 
 #### 2. message (obligatoire)
