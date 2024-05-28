@@ -57,7 +57,6 @@ L'objet `httpResponse` contient les informations liées à l'état HTTP de la r�
     "title": "Unprocessable Entity",
     "message": "The request was well-formed but was unable to be followed due to business errors."
   }
-  // ...
 }
 ```
 
@@ -68,9 +67,7 @@ Le champ `message` est un texte obligatoire qui fournit une explication globale 
 **Exemple de propriété `message`**
 ```json
 {
-  // ...
   "message": "Payment refused."
-  // ...
 }
 ```
 
@@ -83,17 +80,13 @@ Le champ `code` est un identifiant unique associé au message global de l'erreur
 Un exemple dans lequel les développeurs ont choisis d'utiliser un code sous forme de chaîne de caractères:
 ```json
 {
-  // ...
   "code": "PAYMENT_REFUSED"
-  // ...
 }
 ```
 Un exemple dans lequel les développeurs ont choisis d'utiliser un code sous format de GUID:
 ```json
 {
-  // ...
   "code": "f2b26bf1-19c9-4ead-94d3-e8d97846dd33"
-  // ...
 }
 ```
 
@@ -103,7 +96,6 @@ Le tableau `errors` contient des informations détaillées sur des erreurs spéc
 
 ```json
 {
-    // ...
     "errors": [
       {
         "code": "4f46694f-52e2-4af3-b7cb-def91b9598ca",
@@ -122,7 +114,6 @@ Le tableau `errors` contient des informations détaillées sur des erreurs spéc
         }
       }
     ]
-    // ...
 }
 ```
 
@@ -162,7 +153,6 @@ Ici la valeur de la proriété de tri n'est pas valide lors de l'appel `HTTP/GET
       "method": "GET"
     }
   }
-  // ...
 }
 ```
 
@@ -178,7 +168,6 @@ Cet exemple montre comment indiquer un en-tête de requête:
       }
     }
   ]
-  // ...
 }
 ```
 
@@ -191,7 +180,6 @@ Contient des liens hypermedia spécifiques à cette erreur.
 
 ```json
 {
-    // ...
     "errors": [
       {
         "code": "4f46694f-52e2-4af3-b7cb-def91b9598ca",
@@ -204,7 +192,6 @@ Contient des liens hypermedia spécifiques à cette erreur.
         }
       }
     ]
-    // ...
 }
 ```
 
@@ -240,7 +227,6 @@ L'objet `_metadata` est un tableau optionnel dont le contenu dépend du serveur.
 
 ```json
 {
-  // ...
   "_metadata": {
     "transactionId": "550e8400-e29b-41d4-a716-446655440001",
     "timestamp": "2024-05-25T14:35:00Z",
