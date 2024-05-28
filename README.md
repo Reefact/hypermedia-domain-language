@@ -189,7 +189,7 @@ Voici un exemple de ressource HDL montrant la structure de base et l'utilisation
 
 HDL est conçu pour évoluer avec les besoins des utilisateurs et des développeurs, en intégrant les meilleures pratiques des formats existants tout en apportant une simplicité et une clarté unique. Ce format offre une base solide pour créer des API RESTful robustes et conviviales, orientées vers les termes métiers et faciles à utiliser pour tous.
 
-## Documentation du foramat HDL
+## Documentation du format HDL
 
 * [Collections](doc/collection.md)
   * [Pagination](doc/pagination.md)
