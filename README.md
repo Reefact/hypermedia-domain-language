@@ -95,13 +95,13 @@ Voici un exemple de ressource HDL montrant la structure de base et l'utilisation
         "lang": "fr",
         "title": "Download Markdown (FR)",
         "deprecation": "http://example.com/docs/deprecations/download"
+      },
+      {
+        "href": "http://example.com/articles/1/download?lang={lang}&type={type}",
+        "templated": true,
+        "title": "Download Article"
       }
-    ],
-    "download-v2": {
-      "href": "http://example.com/articles/1/download?lang={lang}&type={type}",
-      "templated": true,
-      "title": "Download Article v2"
-    }
+    ]
   }
 }
 ```
