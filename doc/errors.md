@@ -78,12 +78,14 @@ Le champ `code` est un identifiant unique associé au message global de l'erreur
 Un exemple dans lequel les développeurs ont choisis d'utiliser un code sous forme de chaîne de caractères:
 ```json
 {
+  "message": "Payment refused.",
   "code": "PAYMENT_REFUSED"
 }
 ```
 Un exemple dans lequel les développeurs ont choisis d'utiliser un code sous format de GUID:
 ```json
 {
+  "message": "Payment refused.",
   "code": "f2b26bf1-19c9-4ead-94d3-e8d97846dd33"
 }
 ```
@@ -93,7 +95,6 @@ Un exemple dans lequel les développeurs ont choisis d'utiliser un code sous for
 Le tableau `errors` contient des informations détaillées sur des erreurs spécifiques survenues lors de la requête. Chaque entrée du tableau `errors` est un objet décrivant une erreur particulière.
 
 ```json
-{
     "errors": [
       {
         "code": "4f46694f-52e2-4af3-b7cb-def91b9598ca",
@@ -112,7 +113,6 @@ Le tableau `errors` contient des informations détaillées sur des erreurs spéc
         }
       }
     ]
-}
 ```
 
 ##### 4.1. message (obligatoire)
@@ -136,7 +136,6 @@ Un objet décrivant la source de l'erreur.
 Ici la valeur de la proriété de tri n'est pas valide lors de l'appel `HTTP/GET http://example.com/articles`:
 
 ```json
-{
   "errors": [
     {
       "message": "Invalid sort parameter value.",
@@ -151,13 +150,11 @@ Ici la valeur de la proriété de tri n'est pas valide lors de l'appel `HTTP/GET
       "method": "GET"
     }
   }
-}
 ```
 
 Cet exemple montre comment indiquer un en-tête de requête:
 
 ```json
-{
   "errors": [
     {
       "message": "Report-Id header is missing. User cannot download the report.",
@@ -166,7 +163,6 @@ Cet exemple montre comment indiquer un en-tête de requête:
       }
     }
   ]
-}
 ```
 
 
@@ -177,7 +173,6 @@ Contient des liens hypermedia spécifiques à cette erreur.
   - **about** : Un lien vers une documentation détaillée sur l'erreur spécifique, permettant aux développeurs de comprendre et de corriger plus facilement le problème.
 
 ```json
-{
     "errors": [
       {
         "code": "4f46694f-52e2-4af3-b7cb-def91b9598ca",
@@ -190,7 +185,6 @@ Contient des liens hypermedia spécifiques à cette erreur.
         }
       }
     ]
-}
 ```
 
 Dans cet exemple l'url `https://example.com/api/doc/err/4f46694f-52e2-4af3-b7cb-def91b9598ca.htm` peut donner des informations sur le format attendu pour un titre d'article.
@@ -204,7 +198,6 @@ L'objet `_links` contient des liens hypermedia fournissant des informations supp
 
 ```json
 {
-  
   "message": "Payment refused.",
   "code": "c01a4e2b-7f3d-4d3b-9101-f5a1e3b2e2b1",
   "_links": {
@@ -224,13 +217,11 @@ L'objet `_links` contient des liens hypermedia fournissant des informations supp
 L'objet `_metadata` est un tableau optionnel dont le contenu dépend du serveur. Il fournit des métadonnées supplémentaires sur la réponse d'erreur, telles que des identifiants de transaction, des horodatages, ou des versions de l'API, bien que le contenu exact dépende des besoins spécifiques de l'application et du serveur.
 
 ```json
-{
   "_metadata": {
     "transactionId": "550e8400-e29b-41d4-a716-446655440001",
     "timestamp": "2024-05-25T14:35:00Z",
     "apiVersion": "1.2.3"
   }
-}
 ```
 ## Quelques exemples d'erreurs
 
