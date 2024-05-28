@@ -116,3 +116,4 @@ HDL est conçu pour évoluer avec les besoins des utilisateurs et des développe
   * [Filtrage](doc/filtering.md)
   * [Recherche](doc/search.md)
 * [Métadonnées](doc/metadata.md)
+* [Erreurs](doc/errors.md)
