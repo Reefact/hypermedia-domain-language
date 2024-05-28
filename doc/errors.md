@@ -233,7 +233,7 @@ L'objet `_metadata` est un tableau optionnel dont le contenu dépend du serveur.
 POST http://example.com/articles
 Content-Type: application/json
 {
-  "description": "Too short"
+  "message": "Too short"
 }
 ```
 
@@ -253,7 +253,7 @@ Content-Type: application/json
       "code": "123e4567-e89b-12d3-a456-426614174001",
       "message": "Title is required.",
       "source": {
-        "pointer": "/data/attributes/title"
+        "pointer": "/title"
       },
       "_links": {
         "about": {
@@ -265,7 +265,7 @@ Content-Type: application/json
       "code": "123e4567-e89b-12d3-a456-426614174002",
       "message": "Description must be at least 10 characters long.",
       "source": {
-        "pointer": "/data/attributes/description"
+        "pointer": "/info/description"
       },
       "_links": {
         "about": {
