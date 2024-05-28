@@ -1,4 +1,4 @@
-# Hypermedia Domain Language (HDL)
+# Hypermedia Domain Language
 
 ## Introduction
 
@@ -6,7 +6,7 @@ Hypermedia Domain Language (HDL) est un format JSON conçu pour représenter des
 
 Là où d'autres formats imposent une restructuration complète des contrats API, le Hypermedia Domain Language tire parti de l'organisation traditionnelle REST en ressources et sous-ressources. HDL permet d'enrichir ces structures de manière graduelle, selon les fonctionnalités désirées, offrant une flexibilité accrue sans compromettre la clarté du contrat initial. Cette approche facilite l'intégration d'HATEOAS en augmentant les capacités des API tout en restant fidèle aux principes de simplicité et d'évolutivité inhérents à REST.
 
-Le Hypermedia Domain Language (HDL) propose une approche intégrée des principes HATEOAS pour les API RESTful, en enrichissant les structures JSON traditionnelles sans les compliquer. HDL facilite une navigation dynamique et intuitive, permettant des interactions plus claires et plus directes à travers les applications. C’est une option pratique pour ceux qui cherchent à adopter HATEOAS tout en maintenant la simplicité et l’efficacité de leurs interfaces API.
+Le Hypermedia Domain Language propose une approche intégrée des principes HATEOAS pour les API RESTful, en enrichissant les structures JSON traditionnelles sans les compliquer. HDL facilite une navigation dynamique et intuitive, permettant des interactions plus claires et plus directes à travers les applications. C’est une option pratique pour ceux qui cherchent à adopter HATEOAS tout en maintenant la simplicité et l’efficacité de leurs interfaces API.
 
 ## Caractéristiques Principales de HDL
 
