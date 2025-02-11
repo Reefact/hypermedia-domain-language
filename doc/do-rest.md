@@ -118,13 +118,13 @@ Les services utilisent eux aussi des actions, qui prennent la forme d’un `GET`
 
 DO-REST clarifie ces distinctions pour éviter les dérives observées dans certaines implémentations REST classiques. Cette approche permet d’obtenir des API plus cohérentes et plus lisibles tout en restant alignées avec les principes REST.
 
-# 3. Convention de conception d’une API DO-REST
+## 3. Convention de conception d’une API DO-REST
 
 DO-REST suit les principes fondamentaux de REST tout en renforçant l’orientation métier. Cette section définit les conventions utilisées pour structurer une API DO-REST de manière claire et cohérente.
 
-## 3.1 Conventions générales
+### 3.1 Conventions générales
 
-### Rappel
+#### Rappel
 
 DO-REST structure ses endpoints en suivant une logique métier claire et cohérente.  
 
@@ -139,7 +139,7 @@ DO-REST structure ses endpoints en suivant une logique métier claire et cohére
    - Il ne possède pas d’identifiant et ne peut pas être manipulé comme une ressource.  
    - Les fonctionnalités des services ne peuvent être invoquées que via une **action métier**.
 
-### Format des URLs
+#### Format des URLs
 
 **Ressources et sous-ressources**  
 - `/resources` → Collection de ressources.  
@@ -154,7 +154,7 @@ DO-REST structure ses endpoints en suivant une logique métier claire et cohére
 **Services**
 - `/service/{action}` → Exécution d’une action sur un service.  
 
-### Usage des verbes HTTP  
+#### Usage des verbes HTTP  
 
 | Verbe | Usage en DO-REST |
 |-------|----------------|
@@ -166,7 +166,7 @@ DO-REST structure ses endpoints en suivant une logique métier claire et cohére
 
 **Note sur les `GET` avec body (`POST` utilisé à la place de `GET`) :** _Dans certains cas complexes, un appel `GET` peut nécessiter un payload. Cependant, certaines API REST empêchent de passer un body dans une requête `GET`. Dans ces situations, DO-REST privilégie `POST` pour ces requêtes tout en maintenant une logique métier explicite._
 
-## 3.2 Exemples concrets
+### 3.2 Exemples concrets
 
 Cette section illustre les conventions de DO-REST avec des exemples concrets.
 
@@ -186,7 +186,7 @@ Cette section illustre les conventions de DO-REST avec des exemples concrets.
 - `POST /billing/process-invoices` → Lance un traitement global sur plusieurs factures.  
 - `GET /user-activity?range=last-30-days` → Retourne des statistiques sur l’activité utilisateur.  
 
-## 3.3 Gestion des réponses HTTP
+### 3.3 Gestion des réponses HTTP
 
 DO-REST suit les standards HTTP pour structurer ses réponses.  
 
