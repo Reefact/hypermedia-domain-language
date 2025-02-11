@@ -67,8 +67,7 @@ Un service peut lire, modifier ou créer des ressources, mais il ne doit pas êt
 
 **Exemples de services :**  
 - `POST /auth/reset-password` → Déclenche l’envoi d’un email de réinitialisation.  
-- `POST /billing/process-invoices` → Déclenche un traitement global sur plusieurs factures (au lieu d’un `POST /invoices/123/generate` qui concernerait une ressource unique).  
-- `GET /billing/tax-rules?country=FR` → Retourne des règles fiscales calculées dynamiquement (un service purement en lecture).  
+- `POST /billing/process-invoices` → Déclenche un traitement global sur plusieurs factures (au lieu d’un `POST /invoices/123/generate` qui concernerait une ressource unique).
 
 ### 2.3 Actions
 
