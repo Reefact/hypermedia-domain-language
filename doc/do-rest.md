@@ -36,7 +36,7 @@ Avec DO-REST, chaque action ayant un impact sur l’état métier est clairement
 
 Voici la version mise à jour de la **section 2 - Ressources, Services et Actions** en intégrant tes retours.  
 
-## 2. Ressources, Services et Actions : une distinction clé
+## 2. Ressources, Services et Actions
 
 DO-REST introduit une séparation claire entre **ressources**, **services**, et **actions** afin d'éviter les ambiguïtés présentes dans de nombreuses implémentations REST classiques. Cette distinction permet d’exposer une API qui reflète mieux le métier et qui évite de masquer les processus métier derrière des structures artificielles.
 
