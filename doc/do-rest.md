@@ -187,27 +187,69 @@ Cette section illustre les conventions de DO-REST avec des exemples concrets.
 
 ### 3.3 Gestion des réponses HTTP
 
-DO-REST suit les standards HTTP pour structurer ses réponses.  
+DO-REST suit les standards HTTP pour structurer ses réponses en apportant des précisions métier adaptées.
 
-**Exemples :**  
-1. Création réussie :  
+#### Règles générales des réponses HTTP en DO-REST
+
+- Seuls les `GET` et les `POST` qui remplacent les `GET` nécessitant un payload retournent des données.
+- Les `POST` qui créent une ressource doivent retourner `Location` et peuvent également inclure un payload HDL contenant les liens HATEOAS pour accéder à la ressource créée.
+- Les actions métier (`PATCH`, `POST` sur service, `DELETE`) retournent un code de réponse HTTP mais ne doivent pas retourner d'état métier mis à jour.
+- Les requêtes asynchrones (`202 Accepted`) doivent retourner `Location` et peuvent également inclure un payload HDL contenant les liens HATEOAS pour suivre l’état du traitement.
+- `422 Unprocessable Entity` est utilisé pour représenter une erreur métier.
+- Les autres statuts HTTP standards restent applicables selon les besoins.
+
+#### Exemples détaillés
+
+1. **Création réussie :**
    ```http
    HTTP/1.1 201 Created
-   Location: /teams/123
-   ```
-2. Action exécutée sans contenu de retour :  
-   ```http
-   HTTP/1.1 204 No Content
-   ```
-3. Erreur de validation :  
-   ```http
-   HTTP/1.1 400 Bad Request
    Content-Type: application/json
    
    {
-     "error": "Invalid team name",
-     "field": "name"
+     "_links": {
+       "self": { "href": "/teams/123" }
+     }
+   }
+   ```
+
+2. **Action exécutée sans contenu de retour :**
+   ```http
+   HTTP/1.1 204 No Content
+   ```
+
+3. **Requête acceptée pour un traitement asynchrone :**
+   ```http
+   HTTP/1.1 202 Accepted
+   Content-Type: application/json
+   
+   {
+     "_links": {
+       "status": { "href": "/jobs/42/status" }
+     }
+   }
+   ```
+
+4. **Erreur métier avec `422 Unprocessable Entity` :**
+
+_Contexte : Un appel `PATCH /teams/42/members/22/demote` tente de rétrograder un membre **propriétaire** (`owner`) en **membre simple**. Cependant, il est le **seul propriétaire** restant de l’équipe, ce qui rend cette action invalide._
+   
+   ```http
+   HTTP/1.1 422 Unprocessable Entity
+   Content-Type: application/json
+   
+   {
+     "errors": [
+       {
+         "code": "LAST_OWNER_RESTRICTION",
+         "message": "Cannot demote the last owner of the team.",
+         "_links": {
+           "origin": { "href": "/teams/42/members/22/demote", "method": "PATCH" },
+           "about": { "href": "http://example.com/docs/errors/last-owner-restriction" }
+         }
+       }
+     ]
    }
    ```
 
 👉 **Référence complète sur les codes HTTP** : [MDN HTTP Response Status Codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status).
+
