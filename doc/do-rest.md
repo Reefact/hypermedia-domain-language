@@ -201,6 +201,8 @@ DO-REST suit les standards HTTP pour structurer ses réponses en apportant des p
 
 👉 **Cette table couvre les principaux cas d'usage des réponses HTTP en DO-REST, mais des ajustements peuvent être nécessaires selon les contextes métier et technique spécifiques. Les autres statuts HTTP standards restent applicables selon les besoins.**
 
+**Note : ** _Le code HTTP 422 Unprocessable Entity est utilisé en DO-REST pour signaler une erreur métier lorsque l'action demandée est logiquement invalide dans le contexte métier, même si la requête est techniquement bien formée._
+
 #### Exemples détaillés
 
 1. **Création réussie :**
