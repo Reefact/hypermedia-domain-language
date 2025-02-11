@@ -57,7 +57,7 @@ Dans DO-REST, les ressources doivent être cohérentes avec le domaine métier e
 
 Cela permet de garder une structure claire et d’éviter que l’appelant ait à manipuler des détails internes de la ressource.
 
-### 2.2 Services**
+### 2.2 Services
 
 Un **service** en DO-REST représente un processus métier sans état, qui exécute une logique métier mais qui ne correspond pas à une ressource persistée. Contrairement à une ressource, un service ne possède pas d'identifiant unique et son résultat dépend uniquement des paramètres fournis à l’appel.  
 
@@ -70,7 +70,7 @@ Un service peut lire, modifier ou créer des ressources, mais il ne doit pas êt
 - `POST /billing/process-invoices` → Déclenche un traitement global sur plusieurs factures (au lieu d’un `POST /invoices/123/generate` qui concernerait une ressource unique).  
 - `GET /billing/tax-rules?country=FR` → Retourne des règles fiscales calculées dynamiquement (un service purement en lecture).  
 
-### 2.3 Actions : un levier pour exposer le métier
+### 2.3 Actions
 
 Les **actions** sont un élément clé de DO-REST. Elles permettent d’exprimer des intentions métier sans détourner les méthodes REST classiques (`PATCH`, `PUT`). Une action peut être appliquée à une ressource ou à un service, selon le contexte.  
 
