@@ -117,3 +117,98 @@ Les services utilisent eux aussi des actions, qui prennent la forme d’un `GET`
 | **Action** | Opération métier explicite, appliquée à une ressource ou un service | `POST /orders/42/confirm` |
 
 DO-REST clarifie ces distinctions pour éviter les dérives observées dans certaines implémentations REST classiques. Cette approche permet d’obtenir des API plus cohérentes et plus lisibles tout en restant alignées avec les principes REST.
+
+# 3. Convention de conception d’une API DO-REST
+
+DO-REST suit les principes fondamentaux de REST tout en renforçant l’orientation métier. Cette section définit les conventions utilisées pour structurer une API DO-REST de manière claire et cohérente.
+
+## 3.1 Conventions générales
+
+### Rappel
+
+DO-REST structure ses endpoints en suivant une logique métier claire et cohérente.  
+
+1. **Les ressources et leurs collections**
+   - Une **collection de ressources** regroupe plusieurs ressources du même type et permet d’interagir avec elles.
+   - Une **ressource** représente une entité métier identifiable.   
+   - Une **sous-ressource** est un élément directement dépendant d’une ressource principale.  
+   - Les **actions métier** peuvent être appliquées à une ressource ou à une collection.  
+
+2. **Les services**  
+   - Un **service** exécute une logique métier sans être une ressource persistée.  
+   - Il ne possède pas d’identifiant et ne peut pas être manipulé comme une ressource.  
+   - Les fonctionnalités des services ne peuvent être invoquées que via une **action métier**.
+
+### Format des URLs
+
+**Ressources et sous-ressources**  
+- `/resources` → Collection de ressources.  
+- `/resources/{id}` → Ressource spécifique.  
+- `/resources/{action}` → Action appliquée à une collection de ressources.  
+- `/resources/{id}/{action}` → Action appliquée à une ressource spécifique.  
+- `/resources/{id}/sub-resources` → Collection de sous-ressources d’une ressource.  
+- `/resources/{id}/sub-resources/{sub-id}` → Une sous-ressource spécifique.  
+- `/resources/{id}/sub-resources/{action}` → Une action sur la collection de sous-ressources.  
+- `/resources/{id}/sub-resources/{sub-id}/{action}` → Une action sur une sous-ressource spécifique.  
+
+**Services**
+- `/service/{action}` → Exécution d’une action sur un service.  
+
+### Usage des verbes HTTP  
+
+| Verbe | Usage en DO-REST |
+|-------|----------------|
+| **GET** | Récupérer une collection de ressources, une ressource spécifique ou le résultat d’un traitement sans effet de bord. |
+| **POST** | Exécuter une action de service ou créer une ressource/sous-ressource via une action métier explicite. Peut aussi être utilisé pour des requêtes GET avec un body lorsque cela est justifié pour favoriser une API explicite métier plutôt qu'explicite technique. |
+| **PUT** | Remplacer entièrement une ressource ou sous-ressource. |
+| **PATCH** | Exécuter une action qui va modifier une ressource ou une sous-ressource. |
+| **DELETE** | Exécuter une action métier qui entraîne la suppression d’une ressource ou sous-ressource. |
+
+**Note sur les `GET` avec body (`POST` utilisé à la place de `GET`) :** _Dans certains cas complexes, un appel `GET` peut nécessiter un payload. Cependant, certaines API REST empêchent de passer un body dans une requête `GET`. Dans ces situations, DO-REST privilégie `POST` pour ces requêtes tout en maintenant une logique métier explicite._
+
+## 3.2 Exemples concrets
+
+Cette section illustre les conventions de DO-REST avec des exemples concrets.
+
+**Exemples pour les ressources**  
+- `GET /teams` → Obtient la liste des équipes.  
+- `GET /teams/{id}` → Obtient une équipe spécifique.  
+- `POST /teams/initiate` → Créer une nouvelle équipe dans le système en utilisant le terme du domaine.  
+- `GET /users/{id}/security` → Obtient les paramètres de sécurité d’un utilisateur.  
+- `PATCH /users/{id}/security/reset` → Réinitialise les paramètres de sécurité.  
+- `PATCH /orders/{id}/confirm` → Confirme une commande.  
+- `PATCH /users/{id}/activate` → Active un utilisateur.  
+- `PATCH /products/{id}/discount` → Applique une réduction sur un produit.  
+- `POST /teams/{id}/members/onboard` → Ajoute un membre à une équipe avec onboarding.  
+- `DELETE /teams/{id}/disband` → Supprime une équipe du système en utilisant le terme du domaine.  
+
+**Exemples pour les services**  
+- `POST /billing/process-invoices` → Lance un traitement global sur plusieurs factures.  
+- `GET /user-activity?range=last-30-days` → Retourne des statistiques sur l’activité utilisateur.  
+
+## 3.3 Gestion des réponses HTTP
+
+DO-REST suit les standards HTTP pour structurer ses réponses.  
+
+**Exemples :**  
+1. Création réussie :  
+   ```http
+   HTTP/1.1 201 Created
+   Location: /teams/123
+   ```
+2. Action exécutée sans contenu de retour :  
+   ```http
+   HTTP/1.1 204 No Content
+   ```
+3. Erreur de validation :  
+   ```http
+   HTTP/1.1 400 Bad Request
+   Content-Type: application/json
+   
+   {
+     "error": "Invalid team name",
+     "field": "name"
+   }
+   ```
+
+👉 **Référence complète sur les codes HTTP** : [MDN HTTP Response Status Codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status).
