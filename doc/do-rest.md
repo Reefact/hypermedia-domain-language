@@ -258,3 +258,18 @@ _Contexte : Un appel `PATCH /teams/42/members/22/demote` tente de rétrograder u
 
 👉 **Référence complète sur les codes HTTP** : [MDN HTTP Response Status Codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status).
 
+### 3.4 Note sur l'approche CQRS de DO-REST
+
+DO-REST applique naturellement une séparation entre les opérations de lecture et d’écriture, ce qui rejoint le principe de Command Query Responsibility Segregation (CQRS). Cependant, cette approche ne doit pas être perçue comme une contrainte lourde nécessitant une infrastructure complexe avec plusieurs bases de données.
+
+Dans DO-REST, CQRS se traduit par une simple distinction logique entre les actions qui modifient l’état du système et celles qui récupèrent des informations. Une écriture (POST, PATCH, DELETE) ne retourne pas directement l’état mis à jour de la ressource, mais uniquement un statut HTTP confirmant l’opération. L'application effectue ensuite un appel GET si elle a besoin d’obtenir les nouvelles données.
+
+Cette séparation présente plusieurs avantages :
+
+- Éviter des retours de données inutiles après une modification.
+- Garantir une récupération optimisée avec un GET adapté au besoin réel.
+- Clarifier les responsabilités métier en distinguant les commandes (actions) des requêtes (lecture).
+
+Par exemple, après l’ajout d’un membre à une équipe via POST /teams/42/members/onboard, il est préférable de récupérer uniquement ses informations essentielles via GET /teams/42/members/33 (avec un éventuel flag pour récupérer une version light du DTO), plutôt que de recharger toute la liste des membres. Mais peut-être l'application nécessite-t-elle la récupération complète de la liste ?
+
+En résumé, l’objectif de CQRS en DO-REST est donc de fluidifier les interactions tout en maintenant une structure cohérente et performante, sans imposer de complexité excessive.
