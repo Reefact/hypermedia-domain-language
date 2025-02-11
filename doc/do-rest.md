@@ -106,9 +106,7 @@ Les services utilisent eux aussi des actions, qui prennent la forme d’un `GET`
 - `GET /auth/session-status` → Vérifie si une session est active sans la modifier.
 - `GET /billing/tax-rules?country=FR` → Récupère les règles fiscales d’un pays sans créer d’état persistant.
 
-**NOTE IMPORTANTE**
-
-__Les exemples de services présentés ici sont volontairement naïfs et génériques pour illustrer le concept. Dans une implémentation réelle, il est essentiel de questionner la nécessité d’un service avant de l’adopter. Dans de nombreux cas, il est possible de rattacher une opération métier à une ressource existante, plutôt que d’introduire un service distinct. Comme en DDD (Domain-Driven Design), les services doivent être utilisés en dernier recours, uniquement lorsqu’une entité métier ou une action sur une ressource ne peut raisonnablement les couvrir.__
+**NOTE IMPORTANTE :** _Les exemples de services présentés ici sont volontairement naïfs et génériques pour illustrer le concept. Dans une implémentation réelle, il est essentiel de questionner la nécessité d’un service avant de l’adopter. Dans de nombreux cas, il est possible de rattacher une opération métier à une ressource existante, plutôt que d’introduire un service distinct. Comme en DDD (Domain-Driven Design), les services doivent être utilisés en dernier recours, uniquement lorsqu’une entité métier ou une action sur une ressource ne peut raisonnablement les couvrir._
 
 ### 2.4 Synthèse
 
