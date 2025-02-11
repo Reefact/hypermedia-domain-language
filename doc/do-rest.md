@@ -187,16 +187,19 @@ Cette section illustre les conventions de DO-REST avec des exemples concrets.
 
 ### 3.3 Gestion des réponses HTTP
 
-DO-REST suit les standards HTTP pour structurer ses réponses en apportant des précisions métier adaptées.
+DO-REST suit les standards HTTP pour structurer ses réponses en apportant des précisions métier adaptées. Cette section fournit une vue des différentes réponses HTTP en DO-REST, en regroupant les cas d'usage courants.
 
-#### Règles générales des réponses HTTP en DO-REST
+| Action | Codes HTTP possibles | Contenu du payload |
+|--------|---------------------|-------------------|
+| **GET (récupération de données ou POST remplaçant un GET nécessitant un payload)** | `200 OK`, `403 Forbidden`, `404 Not Found` | Payload contenant la ressource demandée (format HDL ou autre format supporté) ou une erreur |
+| **POST (création de ressource)** | `201 Created`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | `Location` dans l'en-tête HTTP, et optionnellement un payload (HDL ou autre) contenant les liens vers la ressource créée |
+| **PATCH (modification partielle d’une ressource)** | `200 OK`, `204 No Content`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | Aucun payload en cas de `204`, ou un payload (HDL ou autre) en cas de `200` si des informations complémentaires sont nécessaires |
+| **DELETE (suppression d’une ressource)** | `200 OK`, `204 No Content`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity` | `200 OK` si la ressource existait et a été supprimée, `204 No Content` si la ressource était déjà inexistante, aucun payload (sauf en cas d'erreur) |
+| **POST (action métier sur un service)** | `200 OK`, `202 Accepted`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | Aucun payload en cas de `204`, un payload (HDL ou autre) en cas de `200`, ou un lien de suivi en cas de `202` (requête asynchrone) |
+| **Requête asynchrone (`202 Accepted`)** | `202 Accepted`, `400 Bad Request`, `403 Forbidden` | `Location` dans l'en-tête HTTP pour suivre le traitement, et optionnellement un payload (HDL ou autre) avec des liens HATEOAS |
+| **Erreur métier (`422 Unprocessable Entity`)** | `422 Unprocessable Entity` | Payload d'erreur en format HDL ou autre format supporté contenant les détails de l'erreur |
 
-- Seuls les `GET` et les `POST` qui remplacent les `GET` nécessitant un payload retournent des données.
-- Les `POST` qui créent une ressource doivent retourner `Location` et peuvent également inclure un payload HDL contenant les liens HATEOAS pour accéder à la ressource créée.
-- Les actions métier (`PATCH`, `POST` sur service, `DELETE`) retournent un code de réponse HTTP mais ne doivent pas retourner d'état métier mis à jour.
-- Les requêtes asynchrones (`202 Accepted`) doivent retourner `Location` et peuvent également inclure un payload HDL contenant les liens HATEOAS pour suivre l’état du traitement.
-- `422 Unprocessable Entity` est utilisé pour représenter une erreur métier.
-- Les autres statuts HTTP standards restent applicables selon les besoins.
+👉 **Cette table couvre les principaux cas d'usage des réponses HTTP en DO-REST, mais des ajustements peuvent être nécessaires selon les contextes métier et technique spécifiques. Les autres statuts HTTP standards restent applicables selon les besoins.**
 
 #### Exemples détaillés
 
