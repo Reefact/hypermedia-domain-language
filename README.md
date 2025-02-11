@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Hypermedia Domain Language (HDL) est un format JSON conçu pour représenter des ressources hypermedia dans les API RESTful. Inspiré par des formats existants comme HAL et JSON:API, HDL se concentre sur la clarté, la flexibilité et une représentation fidèle des objets et des termes métiers. Cela facilite la compréhension et l'utilisation des API pour tous les utilisateurs, y compris les développeurs et les experts métiers.
+Hypermedia Domain Language (HDL) est un format JSON conçu pour représenter des ressources hypermedia dans les API [DO-REST](doc/do-rest.md). Inspiré par des formats existants comme HAL et JSON:API, HDL se concentre sur la clarté, la flexibilité et une représentation fidèle des objets et des termes métiers. Cela facilite la compréhension et l'utilisation des API pour tous les utilisateurs, y compris les développeurs et les experts métiers.
 
 Là où d'autres formats imposent une restructuration complète des contrats API, le Hypermedia Domain Language tire parti de l'organisation traditionnelle REST en ressources et sous-ressources. HDL permet d'enrichir ces structures de manière graduelle, selon les fonctionnalités désirées, offrant une flexibilité accrue sans compromettre la clarté du contrat initial. Cette approche facilite l'intégration d'HATEOAS en augmentant les capacités des API tout en restant fidèle aux principes de simplicité et d'évolutivité inhérents à REST.
 
