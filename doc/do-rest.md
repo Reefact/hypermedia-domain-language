@@ -1,14 +1,14 @@
-# DO-REST
+# DORIAX
 
 ## 1. Présentation
 
-### 1.1 Qu’est-ce que DO-REST ?
+### 1.1 Qu’est-ce que DORIAX ?
 
-DO-REST (**Domain-Oriented REST**) est une approche pragmatique de l’architecture REST, conçue pour mieux refléter les concepts métier dans les API. Contrairement à REST classique, souvent limité à des opérations CRUD (Create, Read, Update, Delete), DO-REST introduit une distinction claire entre **ressources** et **services**, et permet l’exposition explicite d’**actions métier** sous forme d’endpoints dédiés.  
+DORIAX (**Domain-Oriented Representation for Inter-Application eXchanges**) est une approche pragmatique basée sur l’architecture REST, conçue pour mieux refléter les concepts métier dans les API. Contrairement à REST classique, souvent limité à des opérations CRUD (Create, Read, Update, Delete), DORIAX introduit une distinction claire entre **ressources** et **services**, et permet l’exposition explicite d’**actions métier** sous forme d’endpoints dédiés.  
 
-L’objectif principal de DO-REST est de rendre les API plus naturelles à utiliser, en évitant de tordre REST pour répondre aux besoins métier. Il s’appuie sur les principes fondamentaux de REST tout en intégrant des concepts issus du DDD (Domain-Driven Design) et du CQRS (Command Query Responsibility Segregation), sans pour autant les imposer.  
+L’objectif principal de DORIAX est de rendre les API plus naturelles à utiliser, en évitant de tordre REST pour répondre aux besoins métier. Il s’appuie sur les principes fondamentaux de REST tout en intégrant des concepts issus du DDD (Domain-Driven Design) et du CQRS (Command Query Responsibility Segregation), sans pour autant les imposer.  
 
-###1.2. Pourquoi DO-REST ?
+###1.2. Pourquoi DORIAX ?
 
 REST est devenu le standard de facto pour la conception d’API web, mais son implémentation traditionnelle repose principalement sur une logique CRUD, où chaque entité est exposée sous forme de ressource manipulable via `GET`, `POST`, `PUT` et `DELETE`. Si cette approche fonctionne bien pour des systèmes simples, elle montre vite ses limites dans les applications métier plus riches.  
 
@@ -18,13 +18,13 @@ Une API REST classique force souvent à modifier une ressource via `PUT` ou `PAT
 
 Avec un modèle CRUD strict, l’appelant doit connaître et gérer ces modifications en passant manuellement tous les champs affectés (`PATCH /orders/42` avec un body `{ "status": "confirmed", "confirmedAt": "2025-02-11T10:00:00Z", "stockReserved": true }`). Cela introduit un **problème majeur** : une partie de la logique métier se retrouve dans l’appelant, alors qu’elle devrait être entièrement gérée côté backend.  
 
-DO-REST résout ce problème en exposant des actions métier explicites (`POST /orders/42/confirm`), ce qui permet au backend de prendre en charge tous les effets métier associés, sans que le client ait à les connaître.  
+DORIAX résout ce problème en exposant des actions métier explicites (`POST /orders/42/confirm`), ce qui permet au backend de prendre en charge tous les effets métier associés, sans que le client ait à les connaître.  
 
 **REST ne distingue pas clairement Ressources et Services**
 
 Dans une API REST classique, tout est souvent exposé sous forme de ressources, même lorsqu’il s’agit d’un processus métier. Cette confusion mène à des conceptions incohérentes où des services métier sont représentés comme des entités factices (`POST /commands` ou `POST /actions`), ce qui brouille la lisibilité de l’API.  
 
-DO-REST clarifie cette distinction :  
+DORIAX clarifie cette distinction :  
 - Une **ressource** représente un élément du domaine, potentiellement composé de plusieurs entités sous-jacentes.  
 - Un **service** exécute une logique métier sans persister d’état. Il est accessible uniquement via `POST` ou `GET`.  
 
@@ -32,17 +32,15 @@ DO-REST clarifie cette distinction :
 
 Dans REST standard, plusieurs chemins peuvent mener au même état final, mais chacun peut avoir des effets de bord différents. Cette flexibilité conduit à des API où la modification d’un statut (`PATCH`) ou l’exécution d’une action (`POST /commands`) ne décrivent pas explicitement ce qui se passe côté métier.  
 
-Avec DO-REST, chaque action ayant un impact sur l’état métier est clairement identifiée (`POST /teams/42/members/onboard`). Il n’y a pas d’ambiguïté sur quelle opération est effectuée et quels effets secondaires sont pris en charge par le backend. Cela évite aux clients de devoir comprendre la logique métier interne et simplifie la gestion des workflows.
-
-Voici la version mise à jour de la **section 2 - Ressources, Services et Actions** en intégrant tes retours.  
+Avec DORIAX, chaque action ayant un impact sur l’état métier est clairement identifiée (`POST /teams/42/members/onboard`). Il n’y a pas d’ambiguïté sur quelle opération est effectuée et quels effets secondaires sont pris en charge par le backend. Cela évite aux clients de devoir comprendre la logique métier interne et simplifie la gestion des workflows.
 
 ## 2. Ressources, Services et Actions
 
-DO-REST introduit une séparation claire entre **ressources**, **services**, et **actions** afin d'éviter les ambiguïtés présentes dans de nombreuses implémentations REST classiques. Cette distinction permet d’exposer une API qui reflète mieux le métier et qui évite de masquer les processus métier derrière des structures artificielles.
+DORIAX introduit une séparation claire entre **ressources**, **services**, et **actions** afin d'éviter les ambiguïtés présentes dans de nombreuses implémentations REST classiques. Cette distinction permet d’exposer une API qui reflète mieux le métier et qui évite de masquer les processus métier derrière des structures artificielles.
 
 ### 2.1 Ressources
 
-Une **ressource** en DO-REST représente un élément structuré du domaine, qui peut être interrogé et manipulé via des opérations spécifiques. Une ressource peut correspondre à une entité métier, à un agrégat ou à une vue métier enrichie.  
+Une **ressource** DORIAX représente un élément structuré du domaine, qui peut être interrogé et manipulé via des opérations spécifiques. Une ressource peut correspondre à une entité métier, à un agrégat ou à une vue métier enrichie.  
 
 **Exemples de ressources :**  
 - `GET /users/42` → Récupère l’utilisateur avec son profil, ses préférences, etc.  
@@ -51,7 +49,7 @@ Une **ressource** en DO-REST représente un élément structuré du domaine, qui
 
 Une ressource peut être une agrégation de plusieurs entités sous-jacentes, mais elle reste une unité cohérente du point de vue de l’API.  
 
-Dans DO-REST, les ressources doivent être cohérentes avec le domaine métier et ne pas être réduites à de simples objets CRUD. Par exemple, au lieu d’exposer une ressource `User` avec des mutations génériques (`PATCH /users/42`), on peut exposer une sous-ressource métier dédiée comme `UserSecurity` :  
+Dans DORIAX, les ressources doivent être cohérentes avec le domaine métier et ne pas être réduites à de simples objets CRUD. Par exemple, au lieu d’exposer une ressource `User` avec des mutations génériques (`PATCH /users/42`), on peut exposer une sous-ressource métier dédiée comme `UserSecurity` :  
 - `GET /users/42/security` → Récupère les paramètres de sécurité de l’utilisateur.  
 - `POST /users/42/security/change-password` → Déclenche l’action métier correspondante.  
 
@@ -59,7 +57,7 @@ Cela permet de garder une structure claire et d’éviter que l’appelant ait �
 
 ### 2.2 Services
 
-Un **service** en DO-REST représente un processus métier sans état, qui exécute une logique métier mais qui ne correspond pas à une ressource persistée. Contrairement à une ressource, un service ne possède pas d'identifiant unique et son résultat dépend uniquement des paramètres fournis à l’appel.  
+Un **service** DORIAX représente un processus métier sans état, qui exécute une logique métier mais qui ne correspond pas à une ressource persistée. Contrairement à une ressource, un service ne possède pas d'identifiant unique et son résultat dépend uniquement des paramètres fournis à l’appel.  
 
 Un service ne doit pas être utilisé par défaut, il ne sert que lorsqu’il n’existe aucune ressource métier évidente à laquelle rattacher l’opération. Cela suit la même logique que les services de domaine en DDD : ils doivent être utilisés avec parcimonie.
 
@@ -71,7 +69,7 @@ Un service peut lire, modifier ou créer des ressources, mais il ne doit pas êt
 
 ### 2.3 Actions
 
-Les **actions** sont un élément clé de DO-REST. Elles permettent d’exprimer des intentions métier sans détourner les méthodes REST classiques (`PATCH`, `PUT`). Une action peut être appliquée à une ressource ou à un service, selon le contexte.  
+Les **actions** sont un élément clé de DORIAX. Elles permettent d’exprimer des intentions métier sans détourner les méthodes REST classiques (`PATCH`, `PUT`). Une action peut être appliquée à une ressource ou à un service, selon le contexte.  
 
 #### Actions sur les ressources
 
@@ -89,7 +87,7 @@ PATCH /orders/42
 ```
 Ici, l’appelant doit savoir quels champs modifier, ce qui introduit du couplage avec la logique métier interne.  
 
-DO-REST :  
+DORIAX :  
 ```http
 POST /orders/42/confirm
 ```
@@ -115,17 +113,17 @@ Les services utilisent eux aussi des actions, qui prennent la forme d’un `GET`
 | **Service** | Processus métier sans état, distinct des ressources | `POST /billing/process-invoices` |
 | **Action** | Opération métier explicite, appliquée à une ressource ou un service | `POST /orders/42/confirm` |
 
-DO-REST clarifie ces distinctions pour éviter les dérives observées dans certaines implémentations REST classiques. Cette approche permet d’obtenir des API plus cohérentes et plus lisibles tout en restant alignées avec les principes REST.
+DORIAX clarifie ces distinctions pour éviter les dérives observées dans certaines implémentations REST classiques. Cette approche permet d’obtenir des API plus cohérentes et plus lisibles tout en restant alignées avec les principes REST.
 
-## 3. Convention de conception d’une API DO-REST
+## 3. Convention de conception d’une API DORIAX
 
-DO-REST suit les principes fondamentaux de REST tout en renforçant l’orientation métier. Cette section définit les conventions utilisées pour structurer une API DO-REST de manière claire et cohérente.
+DORIAX suit les principes fondamentaux de REST tout en renforçant l’orientation métier. Cette section définit les conventions utilisées pour structurer une API DORIAX de manière claire et cohérente.
 
 ### 3.1 Conventions générales
 
 #### Rappel
 
-DO-REST structure ses endpoints en suivant une logique métier claire et cohérente.  
+DORIAX structure ses endpoints en suivant une logique métier claire et cohérente.  
 
 1. **Les ressources et leurs collections**
    - Une **collection de ressources** regroupe plusieurs ressources du même type et permet d’interagir avec elles.
@@ -155,7 +153,7 @@ DO-REST structure ses endpoints en suivant une logique métier claire et cohére
 
 #### Usage des verbes HTTP  
 
-| Verbe | Usage en DO-REST |
+| Verbe | Usage DORIAX |
 |-------|----------------|
 | **GET** | Récupérer une collection de ressources, une ressource spécifique ou le résultat d’un traitement sans effet de bord. |
 | **POST** | Exécuter une action de service ou créer une ressource/sous-ressource via une action métier explicite. Peut aussi être utilisé pour des requêtes GET avec un body lorsque cela est justifié pour favoriser une API explicite métier plutôt qu'explicite technique. |
@@ -163,11 +161,11 @@ DO-REST structure ses endpoints en suivant une logique métier claire et cohére
 | **PATCH** | Exécuter une action qui va modifier une ressource ou une sous-ressource. |
 | **DELETE** | Exécuter une action métier qui entraîne la suppression d’une ressource ou sous-ressource. |
 
-**Note sur les `GET` avec body (`POST` utilisé à la place de `GET`) :** _Dans certains cas complexes, un appel `GET` peut nécessiter un payload. Cependant, certaines API REST empêchent de passer un body dans une requête `GET`. Dans ces situations, DO-REST privilégie `POST` pour ces requêtes tout en maintenant une logique métier explicite._
+**Note sur les `GET` avec body (`POST` utilisé à la place de `GET`) :** _Dans certains cas complexes, un appel `GET` peut nécessiter un payload. Cependant, certaines API REST empêchent de passer un body dans une requête `GET`. Dans ces situations, DORIAX privilégie `POST` pour ces requêtes tout en maintenant une logique métier explicite._
 
 ### 3.2 Exemples concrets
 
-Cette section illustre les conventions de DO-REST avec des exemples concrets.
+Cette section illustre les conventions de DORIAX avec des exemples concrets.
 
 **Exemples pour les ressources**  
 - `GET /teams` → Obtient la liste des équipes.  
@@ -187,7 +185,7 @@ Cette section illustre les conventions de DO-REST avec des exemples concrets.
 
 ### 3.3 Gestion des réponses HTTP
 
-DO-REST suit les standards HTTP pour structurer ses réponses en apportant des précisions métier adaptées. Cette section fournit une vue des différentes réponses HTTP en DO-REST, en regroupant les cas d'usage courants.
+DORIAX suit les standards HTTP pour structurer ses réponses en apportant des précisions métier adaptées. Cette section fournit une vue des différentes réponses HTTP DORIAX, en regroupant les cas d'usage courants.
 
 | Action | Codes HTTP possibles | Contenu du payload |
 |--------|---------------------|-------------------|
@@ -199,9 +197,9 @@ DO-REST suit les standards HTTP pour structurer ses réponses en apportant des p
 | **Requête asynchrone (`202 Accepted`)** | `202 Accepted`, `400 Bad Request`, `403 Forbidden` | `Location` dans l'en-tête HTTP pour suivre le traitement, et optionnellement un payload (HDL ou autre) avec des liens HATEOAS |
 | **Erreur métier (`422 Unprocessable Entity`)** | `422 Unprocessable Entity` | Payload d'erreur en format HDL ou autre format supporté contenant les détails de l'erreur |
 
-👉 **Cette table couvre les principaux cas d'usage des réponses HTTP en DO-REST, mais des ajustements peuvent être nécessaires selon les contextes métier et technique spécifiques. Les autres statuts HTTP standards restent applicables selon les besoins.**
+👉 **Cette table couvre les principaux cas d'usage des réponses HTTP DORIAX, mais des ajustements peuvent être nécessaires selon les contextes métier et technique spécifiques. Les autres statuts HTTP standards restent applicables selon les besoins.**
 
-**Note :** _Le code HTTP 422 Unprocessable Entity est utilisé en DO-REST pour signaler une erreur métier lorsque l'action demandée est logiquement invalide dans le contexte métier, même si la requête est techniquement bien formée._
+**Note :** _Le code HTTP 422 Unprocessable Entity est utilisé par DORIAX pour signaler une erreur métier lorsque l'action demandée est logiquement invalide dans le contexte métier, même si la requête est techniquement bien formée._
 
 #### Exemples détaillés
 
@@ -258,11 +256,11 @@ _Contexte : Un appel `PATCH /teams/42/members/22/demote` tente de rétrograder u
 
 👉 **Référence complète sur les codes HTTP** : [MDN HTTP Response Status Codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status).
 
-### 3.4 Note sur l'approche CQRS de DO-REST
+### 3.4 Note sur l'approche CQRS de DORIAX
 
-DO-REST applique naturellement une séparation entre les opérations de lecture et d’écriture, ce qui rejoint le principe de Command Query Responsibility Segregation (CQRS). Cependant, cette approche ne doit pas être perçue comme une contrainte lourde nécessitant une infrastructure complexe avec plusieurs bases de données.
+DORIAX applique naturellement une séparation entre les opérations de lecture et d’écriture, ce qui rejoint le principe de Command Query Responsibility Segregation (CQRS). Cependant, cette approche ne doit pas être perçue comme une contrainte lourde nécessitant une infrastructure complexe avec plusieurs bases de données.
 
-Dans DO-REST, CQRS se traduit par une simple distinction logique entre les actions qui modifient l’état du système et celles qui récupèrent des informations. Une écriture (POST, PATCH, DELETE) ne retourne pas directement l’état mis à jour de la ressource, mais uniquement un statut HTTP confirmant l’opération. L'application effectue ensuite un appel GET si elle a besoin d’obtenir les nouvelles données.
+Dans DORIAX, CQRS se traduit par une simple distinction logique entre les actions qui modifient l’état du système et celles qui récupèrent des informations. Une écriture (POST, PATCH, DELETE) ne retourne pas directement l’état mis à jour de la ressource, mais uniquement un statut HTTP confirmant l’opération. L'application effectue ensuite un appel GET si elle a besoin d’obtenir les nouvelles données.
 
 Cette séparation présente plusieurs avantages :
 
@@ -272,4 +270,4 @@ Cette séparation présente plusieurs avantages :
 
 Par exemple, après l’ajout d’un membre à une équipe via POST /teams/42/members/onboard, il est préférable de récupérer uniquement ses informations essentielles via GET /teams/42/members/33 (avec un éventuel flag pour récupérer une version light du DTO), plutôt que de recharger toute la liste des membres. Mais peut-être l'application nécessite-t-elle la récupération complète de la liste ?
 
-En résumé, l’objectif de CQRS en DO-REST est donc de fluidifier les interactions tout en maintenant une structure cohérente et performante, sans imposer de complexité excessive.
+En résumé, l’objectif de CQRS en DORIAX est donc de fluidifier les interactions tout en maintenant une structure cohérente et performante, sans imposer de complexité excessive.
