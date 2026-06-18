@@ -333,18 +333,48 @@ DORIAX suit les standards HTTP pour structurer ses réponses en apportant des pr
 
 👉 **Référence complète sur les codes HTTP** : [MDN HTTP Response Status Codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status).
 
-### 3.4 Note sur l'approche CQRS de DORIAX
+### 3.4 Séparation commande / requête
 
-DORIAX applique naturellement une séparation entre les opérations de lecture et d'écriture, ce qui rejoint le principe de Command Query Responsibility Segregation (CQRS). Cependant, cette approche ne doit pas être perçue comme une contrainte lourde nécessitant une infrastructure complexe avec plusieurs bases de données.
+DORIAX sépare nettement les opérations qui **modifient** l'état du système (les commandes) de celles qui le **lisent** (les requêtes). Cette discipline est la **séparation commande/requête (CQS)** appliquée au niveau de l'API : une opération change l'état *ou* renvoie une donnée, elle ne fait pas les deux à la fois.
 
-Dans DORIAX, CQRS se traduit par une simple distinction logique entre les actions qui modifient l'état du système et celles qui récupèrent des informations. Une écriture (`POST`, `PUT`, `DELETE`) ne renvoie pas la représentation complète et mise à jour de la ressource ; elle se limite à un statut HTTP confirmant l'opération, accompagné le cas échéant de liens hypermédia ou d'un identifiant de suivi (par exemple le `Location` d'un `201` ou le lien de statut d'un `202`). L'application effectue ensuite un appel `GET` si elle a besoin d'obtenir les nouvelles données.
+**CQS, pas CQRS.** _Il ne s'agit pas ici de CQRS (Command Query Responsibility Segregation), qui suppose deux **modèles** distincts — un côté écriture validé par le domaine, un côté lecture en projections, éventuellement sur un autre store et en cohérence différée. DORIAX n'impose rien de tel : aucune infrastructure dédiée, aucun second modèle. Il pose seulement la règle d'opération (CQS), qui **prépare le terrain** pour un CQRS ultérieur sans en être un. Cette distinction n'est pas que terminologique : elle conditionne la garantie de relecture décrite plus bas._
 
-Cette séparation présente plusieurs avantages :
+Cette séparation est une **conséquence naturelle de la grammaire DORIAX**, pas un ajout : une action à effet est un `POST` (la commande), une lecture est un `GET` (la requête). §3.4 ne fait qu'en expliciter les conséquences sur les réponses.
 
-- Éviter des retours de données inutiles après une modification.
-- Garantir une récupération optimisée avec un `GET` adapté au besoin réel.
-- Clarifier les responsabilités métier en distinguant les commandes (actions) des requêtes (lecture).
+#### Règle de réponse des écritures
 
-Par exemple, après l'ajout d'un membre à une équipe via `POST /teams/42/members:onboard`, il est préférable de récupérer uniquement ses informations essentielles via `GET /teams/42/members/33` (avec un éventuel paramètre pour obtenir une représentation allégée), plutôt que de recharger toute la liste des membres. Mais peut-être l'application nécessite-t-elle la récupération complète de la liste ?
+> Une écriture (`POST :{action}`, `PUT`, `DELETE`) **ne renvoie jamais la représentation complète et mise à jour** de la ressource. Elle renvoie un **statut HTTP** confirmant l'opération, accompagné le cas échéant de **liens hypermédia** ou d'un **identifiant de suivi** : le `Location` d'un `201 Created`, le lien de statut d'un `202 Accepted`. Le client effectue ensuite un `GET` s'il a besoin de l'état à jour.
 
-En résumé, l'objectif de CQRS en DORIAX est donc de fluidifier les interactions tout en maintenant une structure cohérente et performante, sans imposer de complexité excessive.
+Cette formulation réconcilie §3.4 avec §3.3 : « pas de représentation complète » n'interdit pas un corps de réponse léger (les `_links` d'un `201`, un lien de suivi d'un `202`) — il interdit de **renvoyer l'entité mise à jour** comme le ferait un CRUD classique.
+
+Avantages :
+- éviter des retours de données inutiles après une modification ;
+- laisser le client récupérer exactement ce dont il a besoin, via un `GET` adapté ;
+- clarifier les responsabilités en distinguant commandes (actions) et requêtes (lecture).
+
+#### Le défaut DORIAX : le minimum utile, et le coût qu'il implique
+
+Le comportement **par défaut** d'une écriture DORIAX est de renvoyer le **minimum utile** : de quoi confirmer l'opération et retrouver son résultat — un statut, le `Location` d'un `201`, des liens — **jamais la représentation complète** de la ressource. « Minimum » ne veut pas dire « corps vide » : un `201 Created` accompagné de son `Location` et de ses `_links` (voir §3.3) *est* une réponse minimale ; c'est l'**entité mise à jour** que l'on ne renvoie pas, pas le moindre octet.
+
+Ce choix de défaut découle de CQS (une commande ne renvoie pas de donnée), mais il se justifie aussi en soi : le défaut doit être le cas **le moins coûteux pour le plus grand nombre**. Renvoyer systématiquement l'entité ferait payer à tous les clients une sérialisation que beaucoup ne lisent pas, et les inciterait à **dépendre** de cette représentation — recréant le couplage action↔représentation que DORIAX cherche à éviter. Le défaut « minimum utile » pousse au contraire le client à lire, via un `GET` adapté, exactement ce dont il a besoin.
+
+**Le coût, en contrepartie.** Forcer un `GET` de relecture après chaque écriture, c'est **deux allers-retours réseau** là où un retour de représentation en aurait fait un seul. Pour une transition d'état où le client ne veut que le nouvel état, c'est un coût net. DORIAX l'accepte comme contrepartie du découplage, mais le rend **négociable** : le client peut demander à l'écriture de lui renvoyer directement l'entité.
+
+**La négociation, via l'en-tête `Prefer` (RFC 7240).** Cet en-tête définit une paire de valeurs qui permet au client de basculer par rapport au défaut du serveur :
+
+| En-tête de requête | Demande au serveur de… | Usage en DORIAX |
+|--------------------|------------------------|-----------------|
+| `Prefer: return=minimal` | …ne renvoyer que le minimum (statut, liens). | C'est **déjà le défaut DORIAX** : inutile à envoyer, sauf pour l'expliciter. |
+| `Prefer: return=representation` | …renvoyer la représentation complète et à jour de la ressource. | La **dérogation** : à envoyer quand on veut éviter le `GET` de relecture (cas sensibles à la latence). |
+
+`Prefer` est une **préférence**, pas un ordre : le serveur peut l'ignorer. S'il l'honore, il **devrait** le signaler en réponse avec `Preference-Applied: return=representation`. Et comme `Prefer` est facultatif, DORIAX **doit documenter son défaut** — c'est fait ici : `return=minimal`.
+
+Par exemple, après `POST /teams/42/members:onboard`, on récupère en général les seules informations utiles via `GET /teams/42/members/33` plutôt que de recharger toute la liste — sauf si l'application a réellement besoin de l'entité, auquel cas elle l'obtient directement avec `Prefer: return=representation` sur l'écriture, ou la liste complète via un `GET` explicite.
+
+#### Relecture et cohérence (read-after-write)
+
+La règle « écris, puis relis » suppose que le `GET` qui suit une écriture renvoie bien l'état que cette écriture vient de produire. **C'est vrai tant que le modèle de lecture est immédiatement cohérent** — ce qui est le cas en CQS pur, où lecture et écriture partagent le même modèle. Le jour où une API évoluerait vers un vrai CQRS avec lecture en cohérence différée, ce `GET` pourrait renvoyer un état antérieur : le pattern de relecture immédiate cesserait alors d'être sûr et devrait être traité (jeton de version, attente de propagation, ou lien de suivi). DORIAX reste en CQS et ne contracte donc pas cette difficulté ; il la signale pour que le passage éventuel à CQRS soit fait en connaissance de cause.
+
+#### Et HDL
+
+C'est ici aussi que **HDL** (à spécifier) referme le sujet proprement. Plutôt que de laisser le client *deviner* quelle URL relire après une écriture, la réponse lui fournit les **liens** vers ce qu'il peut consulter ou faire ensuite : la relecture devient un lien donné par le serveur, pas une URL reconstruite côté client. §3.4 et HDL pointent vers la même pièce manquante.
