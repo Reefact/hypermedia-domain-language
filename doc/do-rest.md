@@ -16,7 +16,7 @@ REST est devenu le standard de facto pour la conception d'API web, mais son impl
 
 **REST impose une approche CRUD inadaptée aux actions métier**
 
-Une API REST classique force souvent à modifier une ressource via `PUT` ou `PATCH`, même lorsque le changement d'état résulte d'une action métier spécifique. Par exemple, une action comme confirmer une commande (`confirmOrder`) ne se résume pas à modifier un champ `status`. D'autres mises à jour peuvent être nécessaires, comme la mise à jour de la date de confirmation, la réservation de stock ou l'envoi d'une notification.
+Une API REST classique force souvent à modifier une ressource via `PUT` ou `PATCH`, même lorsque le changement d'état résulte d'une action métier spécifique. Par exemple, une action comme confirmer une commande (`confirm-order`) ne se résume pas à modifier un champ `status`. D'autres mises à jour peuvent être nécessaires, comme la mise à jour de la date de confirmation, la réservation de stock ou l'envoi d'une notification.
 
 Avec un modèle CRUD strict, l'appelant doit connaître et gérer ces modifications en passant manuellement tous les champs affectés (`PATCH /orders/42` avec un body `{ "status": "confirmed", "confirmedAt": "2025-02-11T10:00:00Z", "stockReserved": true }`). Cela introduit un **problème majeur** : une partie de la logique métier se retrouve dans l'appelant, alors qu'elle devrait être entièrement gérée côté backend.
 
@@ -80,7 +80,7 @@ Sans ce signal, certaines URL sont irrémédiablement ambiguës, car un même mo
 
 Cette levée d'ambiguïté profite autant aux humains qu'aux machines. Faute de signal syntaxique, les outils qui analysent une API (générateurs, linters, passerelles, documentation automatique) ne peuvent que *deviner* la nature du dernier segment d'une URL — par heuristiques sur le vocabulaire, voire par des modèles entraînés à classer `/{dernier-segment}` en « ressource » ou « action ». Une inférence reste une inférence : elle échoue précisément sur les cas comme `version` et dépend du nommage. DORIAX rend cette information déterministe — le séparateur porte le sens, plus rien à deviner.
 
-Cette convention n'est pas isolée : c'est celle retenue par Google pour ses *custom methods* (AIP-136), de la forme `POST /v1/users/123:undelete`, appliquée à l'échelle de l'ensemble des API Google Cloud. Elle est également conforme à la RFC 3986, qui autorise le `:` comme `pchar` à l'intérieur d'un segment de chemin.
+Cette convention n'est pas isolée : c'est celle retenue par Google pour ses *custom methods* ([AIP-136](https://google.aip.dev/136)), de la forme `POST /v1/users/123:undelete`, appliquée à l'échelle de l'ensemble des API Google Cloud. Elle est également conforme à la RFC 3986, qui autorise le `:` comme `pchar` à l'intérieur d'un segment de chemin.
 
 DORIAX reprend d'AIP-136 **à la fois la syntaxe du `:` et sa règle de choix du verbe** : une *custom method* est un `POST`, ou un `GET` lorsqu'elle se borne à lire. DORIAX adopte la même discipline — une action (`:{action}`) est un `GET` si elle est sûre, un `POST` sinon (voir §3.1) — et s'engage à en respecter la sémantique HTTP : sûreté du `GET`, neutralité du `POST`. Une fois l'intention nommée dans l'URL, faire porter au verbe une nuance supplémentaire (`PATCH`, `DELETE` métier…) n'ajoute rien que le suffixe ne dise déjà mieux, tout en détournant la sémantique de ces verbes ; DORIAX y renonce donc délibérément.
 
