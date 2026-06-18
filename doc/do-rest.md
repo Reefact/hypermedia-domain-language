@@ -192,8 +192,8 @@ Le suffixe `:{action}` porte l'**intention métier** ; le verbe HTTP ne porte pl
 > **Précisions utiles :**
 > - **`GET` doit rester sûr** — aucun effet de bord. C'est précisément pourquoi `reset-password` est `POST` (il envoie un email) et `forex:convert` est `GET`.
 > - **`POST` ne sur-promet rien** : il signifie « traite cette représentation selon la sémantique de la cible ». Ni sûreté, ni idempotence, ni sémantique de body imposée. C'est exactement ce qui en fait le verbe universel des actions à effet — et la raison pour laquelle DORIAX n'emploie **ni `PATCH` ni `DELETE` comme verbes d'action** : leur sémantique propre (patch document pour `PATCH`, suppression pour `DELETE`) serait détournée, sans gain puisque l'intention est déjà nommée par le suffixe.
-> - **`PUT` et `DELETE` ne s'emploient que pour le CRUD nu** d'une ressource, là où aucun verbe métier ne s'impose (par exemple remplacer ou supprimer un bloc de préférences). Sur ce terrain, DORIAX respecte pleinement leur sémantique RFC : `PUT` est un remplacement intégral idempotent ; `DELETE` est idempotent — un second appel sur une ressource déjà absente renvoie `204`, **jamais `404`**.
-> - **Idempotence des actions `POST`** : la plupart des transitions d'état (`:confirm`, `:activate`, `:demote`) sont idempotentes côté métier, mais DORIAX ne l'exige pas au niveau HTTP, car `POST` ne le promet pas. Pour rendre une action rejouable sans risque (retries réseau), on s'appuie sur une clé d'idempotence portée par la requête (par exemple un en-tête `Idempotency-Key`), et non sur le verbe.
+> - **`PUT` et `DELETE` ne s'emploient que pour le CRUD nu** d'une ressource, là où aucun verbe métier ne s'impose (par exemple remplacer ou supprimer un bloc de préférences). Sur ce terrain, DORIAX respecte pleinement leur sémantique RFC : `PUT` est un remplacement intégral idempotent ; `DELETE` est idempotent — un second appel sur une ressource déjà supprimée n'échoue pas. DORIAX y ajoute une **convention** (renvoyer `204`, pas `404`, au rappel) qui simplifie les clients ; l'idempotence seule ne l'impose pas.
+> - **Idempotence des actions `POST`** : la plupart des transitions d'état (`:confirm`, `:activate`, `:demote`) sont idempotentes côté métier, mais DORIAX ne l'exige pas au niveau HTTP, car `POST` ne le promet pas. Pour rendre une action rejouable sans risque (retries réseau), on s'appuie sur une clé d'idempotence portée par la requête (en-tête `Idempotency-Key`, de fait répandu et en cours de standardisation à l'IETF), et non sur le verbe.
 > - **La création est toujours nommée** : DORIAX n'utilise pas le `POST /collection` nu (voir convention ci-dessous). La création prend la forme `POST /collection:{action}`.
 
 > **Note sur les `GET` avec body (`POST` utilisé à la place de `GET`) :** _Dans certains cas complexes, un appel `GET` peut nécessiter un payload. Cependant, certaines API REST empêchent de passer un body dans une requête `GET`. Dans ces situations, DORIAX privilégie `POST` pour ces requêtes tout en maintenant une logique métier explicite, afin de favoriser une API au vocabulaire métier explicite plutôt que technique._
@@ -217,6 +217,8 @@ Le séparateur `:` rend déterministe la **nature** du segment — nom ou verbe 
 #### Convention DORIAX — toute création porte un nom métier
 
 Là où REST exprime la création par un `POST` sur la collection (`POST /teams`), DORIAX impose un verbe métier explicite (`POST /teams:initiate`). C'est une divergence assumée vis-à-vis de REST : DORIAX préfère un vocabulaire métier explicite à une convention implicite. Dans une URL DORIAX, le dernier segment est toujours **soit un nom (une ressource), soit un verbe métier (une action)** — jamais une création implicite.
+
+**Pourquoi nommer la création, mais tolérer `PUT`/`DELETE` nus ?** Parce que seul `POST` est *polymorphe* : sur une collection, il pourrait signifier « créer à vide », « importer », « cloner »… son intention n'est pas déductible de la méthode. `PUT` (remplacer) et `DELETE` (supprimer) sont au contraire *univoques* — un seul sens chacun — donc la méthode suffit à porter l'intention, et un suffixe métier n'y ajouterait rien. DORIAX nomme donc ce qui est ambigu (`POST`) et laisse nus les verbes qui ne le sont pas.
 
 Cette règle a deux vertus :
 - elle **nomme** l'intention plutôt que de la déduire de la méthode HTTP ;
@@ -245,36 +247,42 @@ Cette section illustre les conventions de DORIAX avec des exemples concrets.
 - `POST /teams/{id}/members:onboard` → Ajoute un membre à une équipe avec onboarding.
 - `POST /teams/{id}/members/{mid}:fire` → Retire un membre de l'équipe (avec la logique métier associée).
 - `POST /teams/{id}:disband` → Dissout une équipe (terme du domaine).
+- `GET /user-activity?range=last-30-days` → Statistiques d'activité (ressource **calculée** : un nom, donc `/`, en lecture seule — ce n'est pas un service, qui s'invoquerait avec `:`).
 
 **Exemples d'accès CRUD direct (sans verbe métier)**
 - `PUT /users/{id}/preferences` → Remplace intégralement le bloc de préférences (idempotent).
 - `DELETE /users/{id}/preferences` → Supprime le bloc de préférences (idempotent).
 
-> _Note : `:fire` et `:disband` sont des **actions métier** (retrait d'un membre avec ses effets de bord, dissolution d'une équipe) — donc `POST`. Une suppression purement technique d'une donnée sans processus métier associé reste un `DELETE` nu sur la ressource. Le choix entre les deux dépend de la présence, ou non, d'un verbe métier qui porte des effets._
+> _Note : `:fire` et `:disband` sont des **actions métier** (retrait d'un membre avec ses effets de bord, dissolution d'une équipe) — donc `POST`. Une simple suppression de donnée, sans **effet métier à orchestrer** (notification, cascade, transition d'état), reste un `DELETE` nu sur la ressource. Le critère est la présence d'**effets à déclencher**, pas l'absence de toute règle : un `PUT`/`DELETE` nu peut malgré tout être refusé par une invariante (d'où le `409`/`422` possible dans la table)._
 
 **Exemples pour les services**
 - `POST /billing:process-invoices` → Lance un traitement global sur plusieurs factures.
-- `GET /user-activity?range=last-30-days` → Retourne des statistiques sur l'activité utilisateur (ressource calculée : un nom, donc `/`, en lecture seule).
 
 ### 3.3 Gestion des réponses HTTP
 
 DORIAX suit les standards HTTP pour structurer ses réponses en apportant des précisions métier adaptées. Cette section fournit une vue des différentes réponses HTTP DORIAX, en regroupant les cas d'usage courants.
 
+**Format de représentation.** _Tout corps de réponse d'une API DORIAX (ressource, collection, et autres contenus de succès) suit le format **HDL** (Hypermedia Domain Language), spécifié séparément. HDL est un profil hypermédia bâti sur HAL : il en reprend la structure (`_links`, `self`, `href`) et l'enrichit (méthode HTTP portée par le lien, titres, dépréciations, templates d'URI). Les exemples de payload de cette section n'en utilisent qu'un sous-ensemble — les `_links` de base — et restent donc du HDL valide. La représentation des erreurs suivra également HDL une fois ce volet stabilisé._
+
 | Opération | Codes HTTP possibles | Contenu du payload |
 |-----------|---------------------|-------------------|
-| **GET** (lecture d'une ressource ou action sûre `:{action}`, ou `POST` remplaçant un `GET` nécessitant un body) | `200 OK`, `403 Forbidden`, `404 Not Found` | Payload contenant la ressource demandée (format HAL ou autre format supporté) ou une erreur |
-| **POST** — l'action **crée une ressource** (`POST /coll:{action}`) | `201 Created`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | `Location` dans l'en-tête HTTP, et optionnellement un payload (HAL ou autre) contenant les liens vers la ressource créée |
-| **POST** — l'action **produit un autre effet** (transition d'état, mutation, opération de service ; `:{action}`) | `200 OK`, `202 Accepted`, `204 No Content`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | Aucun payload en cas de `204`, un payload (HAL ou autre) en cas de `200`, ou un lien de suivi en cas de `202` (traitement asynchrone) |
-| **PUT** (remplacement d'une ressource — CRUD nu) | `200 OK`, `204 No Content`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | Aucun payload en cas de `204`, ou un payload (HAL ou autre) en cas de `200` |
-| **DELETE** (suppression d'une ressource — CRUD nu) | `200 OK`, `204 No Content`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | `200 OK` si la ressource existait et a été supprimée (payload optionnel), `204 No Content` si la ressource était déjà inexistante ou s'il n'y a rien à retourner. **DELETE est idempotent : l'absence de la ressource ne produit pas de `404`.** |
-| **Requête asynchrone (`202 Accepted`)** | `202 Accepted`, `400 Bad Request`, `403 Forbidden` | `Location` dans l'en-tête HTTP pour suivre le traitement, et optionnellement un payload (HAL ou autre) avec des liens HATEOAS |
-| **Erreur métier (`422 Unprocessable Entity`)** | `422 Unprocessable Entity` | Payload d'erreur en format HAL ou autre format supporté contenant les détails de l'erreur |
+| **GET** (lecture d'une ressource ou action sûre `:{action}`, ou `POST` remplaçant un `GET` nécessitant un body) | `200 OK`, `403 Forbidden`, `404 Not Found` | Payload contenant la ressource demandée (format HDL) ou une erreur |
+| **POST** — l'action **crée une ressource** (sur une collection `POST /coll:{action}`, ou via un service qui crée) | `201 Created`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | `Location` dans l'en-tête HTTP, et optionnellement un payload (HDL) contenant les liens vers la ressource créée |
+| **POST** — l'action **produit un autre effet** (transition d'état, mutation, opération de service ; `:{action}`) | `200 OK`, `202 Accepted`, `204 No Content`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | Aucun payload en cas de `204`, un payload (HDL) en cas de `200`, ou un lien de suivi en cas de `202` (traitement asynchrone) |
+| **PUT** (remplacement d'une ressource — CRUD nu) | `200 OK`, `204 No Content`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | Aucun payload en cas de `204`, ou un payload (HDL) en cas de `200` |
+| **DELETE** (suppression d'une ressource — CRUD nu) | `200 OK`, `204 No Content`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | `200 OK` si la ressource existait et a été supprimée (payload optionnel), `204 No Content` s'il n'y a rien à retourner. **Convention DORIAX** : un appel sur une ressource déjà absente renvoie `204`, **pas `404`**. L'idempotence garantit seulement que ce second appel n'échoue pas ; le choix de `204` plutôt que `404` est une convention (RFC 9110 §9.2.2 autoriserait un `404`). |
+| **Requête asynchrone (`202 Accepted`)** | `202 Accepted`, `400 Bad Request`, `403 Forbidden` | `Location` dans l'en-tête HTTP pour suivre le traitement, et optionnellement un payload (HDL) avec des liens HATEOAS |
+| **Erreur métier (`422 Unprocessable Entity`)** | `422 Unprocessable Entity` | Payload d'erreur en format HDL contenant les détails de l'erreur |
 
 👉 **Cette table couvre les principaux cas d'usage des réponses HTTP DORIAX, mais des ajustements peuvent être nécessaires selon les contextes métier et technique spécifiques. Les autres statuts HTTP standards restent applicables selon les besoins.**
+
+**Note — codes transverses.** _Trois codes s'appliquent à **toute** opération et ne sont donc pas répétés ligne à ligne : `400 Bad Request` (requête syntaxiquement invalide — y compris une query string malformée sur un `GET`), `401 Unauthorized` (appelant **non authentifié**) et `403 Forbidden` (authentifié mais **non autorisé**). La distinction `401`/`403` est normative : ne pas renvoyer `403` à un appelant simplement non authentifié._
 
 **Note — `409` vs `422`.** _`409 Conflict` signale un conflit avec l'**état courant** de la ressource (accès concurrent, doublon, version obsolète). `422 Unprocessable Entity` signale une **règle métier violée** alors que la requête est syntaxiquement bien formée. Certains cas sont à la frontière des deux ; le choix relève alors d'une convention d'équipe, à documenter une fois pour toutes._
 
 **Note — `422 Unprocessable Entity`.** _Ce code est utilisé par DORIAX pour signaler une erreur métier lorsque l'action demandée est logiquement invalide dans le contexte métier, même si la requête est techniquement bien formée._
+
+**Note — concurrence optimiste (`ETag` / `If-Match` / `412`).** _Le `409` « version obsolète » évoqué ci-dessus suppose un mécanisme pour détecter le conflit. DORIAX recommande le standard HTTP : le serveur expose un `ETag` sur le `GET`, le client le renvoie dans `If-Match` sur l'écriture suivante ; si la ressource a changé entre-temps, le serveur répond `412 Precondition Failed` (ou `428 Precondition Required` s'il exige l'en-tête). C'est, côté lecture/écriture, le pendant de la clé d'idempotence vue côté rejouabilité (§3.1)._
 
 #### Exemples détaillés
 
@@ -339,13 +347,13 @@ DORIAX sépare nettement les opérations qui **modifient** l'état du système (
 
 **CQS, pas CQRS.** _Il ne s'agit pas ici de CQRS (Command Query Responsibility Segregation), qui suppose deux **modèles** distincts — un côté écriture validé par le domaine, un côté lecture en projections, éventuellement sur un autre store et en cohérence différée. DORIAX n'impose rien de tel : aucune infrastructure dédiée, aucun second modèle. Il pose seulement la règle d'opération (CQS), qui **prépare le terrain** pour un CQRS ultérieur sans en être un. Cette distinction n'est pas que terminologique : elle conditionne la garantie de relecture décrite plus bas._
 
-Cette séparation est une **conséquence naturelle de la grammaire DORIAX**, pas un ajout : une action à effet est un `POST` (la commande), une lecture est un `GET` (la requête). §3.4 ne fait qu'en expliciter les conséquences sur les réponses.
+Cette séparation est une **conséquence naturelle de la grammaire DORIAX**, pas un ajout : une action à effet est un `POST` (la commande), une lecture est un `GET` (la requête). Les règles ci-dessous en explicitent les conséquences sur les réponses.
 
 #### Règle de réponse des écritures
 
-> Une écriture (`POST :{action}`, `PUT`, `DELETE`) **ne renvoie jamais la représentation complète et mise à jour** de la ressource. Elle renvoie un **statut HTTP** confirmant l'opération, accompagné le cas échéant de **liens hypermédia** ou d'un **identifiant de suivi** : le `Location` d'un `201 Created`, le lien de statut d'un `202 Accepted`. Le client effectue ensuite un `GET` s'il a besoin de l'état à jour.
+> **Par défaut**, une écriture (`POST :{action}`, `PUT`, `DELETE`) **ne renvoie pas la représentation complète et mise à jour** de la ressource. Elle renvoie un **statut HTTP** confirmant l'opération, accompagné le cas échéant de **liens hypermédia** ou d'un **identifiant de suivi** : le `Location` d'un `201 Created`, le lien de statut d'un `202 Accepted`. Le client effectue ensuite un `GET` s'il a besoin de l'état à jour — ou demande la représentation directement via `Prefer: return=representation` (voir plus bas).
 
-Cette formulation réconcilie §3.4 avec §3.3 : « pas de représentation complète » n'interdit pas un corps de réponse léger (les `_links` d'un `201`, un lien de suivi d'un `202`) — il interdit de **renvoyer l'entité mise à jour** comme le ferait un CRUD classique.
+« Pas de représentation complète » n'interdit pas un corps de réponse léger — les `_links` d'un `201`, un lien de suivi d'un `202` (cohérent avec §3.3) ; cela interdit seulement de **renvoyer l'entité mise à jour** comme le ferait un CRUD classique.
 
 Avantages :
 - éviter des retours de données inutiles après une modification ;
@@ -377,4 +385,4 @@ La règle « écris, puis relis » suppose que le `GET` qui suit une écriture r
 
 #### Et HDL
 
-C'est ici aussi que **HDL** (à spécifier) referme le sujet proprement. Plutôt que de laisser le client *deviner* quelle URL relire après une écriture, la réponse lui fournit les **liens** vers ce qu'il peut consulter ou faire ensuite : la relecture devient un lien donné par le serveur, pas une URL reconstruite côté client. §3.4 et HDL pointent vers la même pièce manquante.
+C'est ici aussi que **HDL** (encore à spécifier) referme le sujet proprement. Plutôt que de laisser le client *deviner* quelle URL relire après une écriture, la réponse lui fournit les **liens** vers ce qu'il peut consulter ou faire ensuite : la relecture devient un lien donné par le serveur, pas une URL reconstruite côté client. La séparation commande/requête et HDL répondent ainsi au même manque.
