@@ -8,7 +8,7 @@ DORIAX (**Domain-Oriented Representation for Inter-Application eXchanges**) est 
 
 L'objectif principal de DORIAX est de rendre les API plus naturelles à utiliser, en évitant de tordre REST pour répondre aux besoins métier. Il s'appuie sur les principes fondamentaux de REST tout en intégrant des concepts issus du DDD (Domain-Driven Design) et du CQRS (Command Query Responsibility Segregation), sans pour autant les imposer.
 
-DORIAX assume cependant un écart vis-à-vis de REST « pur » au sens de Fielding : exposer des verbes métier dans l'URL relève d'un hybride pragmatique entre REST et RPC-over-HTTP. DORIAX conserve ce qui a une vraie valeur opérationnelle dans REST — en particulier la sémantique HTTP des verbes (sûreté, idempotence) — sans s'imposer la pureté de l'interface uniforme ou de l'hypermédia.
+DORIAX assume cependant un écart vis-à-vis de REST « pur » au sens de Fielding : exposer des verbes métier dans l'URL relève d'un hybride pragmatique entre REST et RPC-over-HTTP. DORIAX conserve ce qui a une vraie valeur opérationnelle dans REST — en particulier la seule distinction de verbe qui change quelque chose pour l'infrastructure : **lecture sûre (`GET`) contre effet (`POST`)** — sans s'imposer la pureté de l'interface uniforme ou de l'hypermédia.
 
 ### 1.2 Pourquoi DORIAX ?
 
@@ -20,7 +20,7 @@ Une API REST classique force souvent à modifier une ressource via `PUT` ou `PAT
 
 Avec un modèle CRUD strict, l'appelant doit connaître et gérer ces modifications en passant manuellement tous les champs affectés (`PATCH /orders/42` avec un body `{ "status": "confirmed", "confirmedAt": "2025-02-11T10:00:00Z", "stockReserved": true }`). Cela introduit un **problème majeur** : une partie de la logique métier se retrouve dans l'appelant, alors qu'elle devrait être entièrement gérée côté backend.
 
-DORIAX résout ce problème en exposant des actions métier explicites (`PATCH /orders/42:confirm`), ce qui permet au backend de prendre en charge tous les effets métier associés, sans que le client ait à les connaître.
+DORIAX résout ce problème en exposant des actions métier explicites (`POST /orders/42:confirm`), ce qui permet au backend de prendre en charge tous les effets métier associés, sans que le client ait à les connaître.
 
 **REST ne distingue pas clairement Ressources et Services**
 
@@ -53,7 +53,7 @@ Une ressource peut être une agrégation de plusieurs entités sous-jacentes, ma
 
 Dans DORIAX, les ressources doivent être cohérentes avec le domaine métier et ne pas être réduites à de simples objets CRUD. Par exemple, au lieu d'exposer une ressource `User` avec des mutations génériques (`PATCH /users/42`), on peut exposer une sous-ressource métier dédiée comme `UserSecurity` :
 - `GET /users/42/security` → Récupère les paramètres de sécurité de l'utilisateur.
-- `PATCH /users/42/security:change-password` → Déclenche l'action métier correspondante (modification en place de la sécurité).
+- `POST /users/42/security:change-password` → Déclenche l'action métier correspondante (modification de la sécurité).
 
 Cela permet de garder une structure claire et d'éviter que l'appelant ait à manipuler des détails internes de la ressource.
 
@@ -70,7 +70,7 @@ Un service est invoqué par une action (`/service:{action}`, voir §3.1). Le ver
 **Exemples de services :**
 - `GET /forex:convert?from=EUR&to=USD&amount=100` → Obtient la conversion d'un montant entre deux devises au taux courant (lecture seule, sans effet de bord).
 - `POST /auth:reset-password` → Déclenche l'envoi d'un email de réinitialisation.
-- `POST /billing:process-invoices` → Déclenche un traitement global sur plusieurs factures (au lieu d'un `PATCH /invoices/123:generate` qui concernerait une ressource unique).
+- `POST /billing:process-invoices` → Déclenche un traitement global sur plusieurs factures (au lieu d'un `POST /invoices/123:generate` qui concernerait une ressource unique).
 
 ### 2.3 Actions
 
@@ -82,7 +82,7 @@ Cette levée d'ambiguïté profite autant aux humains qu'aux machines. Faute de 
 
 Cette convention n'est pas isolée : c'est celle retenue par Google pour ses *custom methods* (AIP-136), de la forme `POST /v1/users/123:undelete`, appliquée à l'échelle de l'ensemble des API Google Cloud. Elle est également conforme à la RFC 3986, qui autorise le `:` comme `pchar` à l'intérieur d'un segment de chemin.
 
-DORIAX emprunte à AIP-136 cette **syntaxe** du `:` ; il ne reprend en revanche pas sa règle de choix du verbe. Là où les *custom methods* de Google s'en tiennent à `POST` (ou `GET`), DORIAX fait porter au verbe HTTP la nature de l'effet (voir §3.1) et s'engage à en respecter la sémantique (sûreté, idempotence).
+DORIAX reprend d'AIP-136 **à la fois la syntaxe du `:` et sa règle de choix du verbe** : une *custom method* est un `POST`, ou un `GET` lorsqu'elle se borne à lire. DORIAX adopte la même discipline — une action (`:{action}`) est un `GET` si elle est sûre, un `POST` sinon (voir §3.1) — et s'engage à en respecter la sémantique HTTP : sûreté du `GET`, neutralité du `POST`. Une fois l'intention nommée dans l'URL, faire porter au verbe une nuance supplémentaire (`PATCH`, `DELETE` métier…) n'ajoute rien que le suffixe ne dise déjà mieux, tout en détournant la sémantique de ces verbes ; DORIAX y renonce donc délibérément.
 
 #### Actions sur les ressources
 
@@ -103,9 +103,9 @@ Ici, l'appelant doit savoir quels champs modifier, ce qui introduit du couplage 
 
 DORIAX :
 ```http
-PATCH /orders/42:confirm
+POST /orders/42:confirm
 ```
-L'action `confirm` encapsule toute la logique métier associée (modification du statut, mise à jour des stocks, notifications, etc.), sans que l'appelant ait à en connaître les détails. Le verbe est `PATCH` car l'action modifie la commande en place (voir le choix du verbe en §3.1).
+L'action `confirm` encapsule toute la logique métier associée (modification du statut, mise à jour des stocks, notifications, etc.), sans que l'appelant ait à en connaître les détails. Le verbe est `POST` car l'action produit un effet ; l'intention, elle, est déjà portée par le suffixe `:confirm` (voir le choix du verbe en §3.1).
 
 #### Actions sur les services
 
@@ -116,7 +116,7 @@ Les services sont eux aussi invoqués par des actions, sous la forme d'un `GET` 
 - `POST /auth:change-password` → Change le mot de passe après vérification du token.
 - `POST /billing:process-invoices` → Lance le traitement d'un lot de factures.
 
-**Note — même intention, cadrages différents.** Le changement de mot de passe illustre comment le cadrage dicte le verbe. Côté ressource, un utilisateur authentifié modifie ses propres paramètres : `PATCH /users/{id}/security:change-password` (modification en place d'une ressource existante). Côté service, dans un flux de réinitialisation où aucun contexte de ressource n'existe (l'utilisateur n'est pas connecté, il agit via un token), l'opération devient une action de service : `POST /auth:change-password`. La même intention métier se projette différemment selon qu'une ressource cible existe ou non.
+**Note — même intention, cadrages différents.** Le changement de mot de passe illustre comment la **cible** varie alors que le verbe reste le même. Côté ressource, un utilisateur authentifié modifie ses propres paramètres : `POST /users/{id}/security:change-password` (action sur une sous-ressource existante). Côté service, dans un flux de réinitialisation où aucun contexte de ressource n'existe (l'utilisateur n'est pas connecté, il agit via un token), l'opération devient une action de service : `POST /auth:change-password`. Le verbe est identique — l'action a un effet, donc `POST` — et c'est la cible (sous-ressource vs service), non la méthode, qui distingue les deux cadrages. La même intention métier se projette sur deux URL différentes selon qu'une ressource cible existe ou non.
 
 **NOTE IMPORTANTE :** _Les exemples de services présentés ici sont volontairement naïfs et génériques pour illustrer le concept. Dans une implémentation réelle, il est essentiel de questionner la nécessité d'un service avant de l'adopter. Dans de nombreux cas, il est possible de rattacher une opération métier à une ressource existante, plutôt que d'introduire un service distinct. Comme en DDD (Domain-Driven Design), les services doivent être utilisés en dernier recours, uniquement lorsqu'une entité métier ou une action sur une ressource ne peut raisonnablement les couvrir._
 
@@ -126,7 +126,7 @@ Les services sont eux aussi invoqués par des actions, sous la forme d'un `GET` 
 |-------------|---------------|------------|
 | **Ressource** | Élément structuré du domaine, identifiable par un ID | `GET /orders/42` |
 | **Service** | Processus métier sans état, distinct des ressources | `POST /billing:process-invoices` |
-| **Action** | Opération métier explicite, appliquée à une ressource ou un service | `PATCH /orders/42:confirm` |
+| **Action** | Opération métier explicite, appliquée à une ressource ou un service | `POST /orders/42:confirm` |
 
 DORIAX clarifie ces distinctions pour éviter les dérives observées dans certaines implémentations REST classiques. Cette approche permet d'obtenir des API plus cohérentes et plus lisibles tout en restant alignées avec les principes REST.
 
@@ -166,26 +166,53 @@ DORIAX structure ses endpoints en suivant une logique métier claire et cohéren
 **Services**
 - `/service:{action}` → Exécution d'une action sur un service.
 
-#### Choix du verbe HTTP (par l'effet, pas par la cible)
+#### Choix du verbe HTTP
 
-Le suffixe `:{action}` porte l'**intention métier** ; le verbe HTTP porte la **nature de l'effet**, et DORIAX s'engage à en respecter la sémantique HTTP — la sûreté et l'idempotence telles que définies par la RFC 9110, §9.2. La cible (service, ressource ou collection) ne *décide* pas du verbe : elle ne fait que se corréler avec l'effet le plus courant.
+DORIAX distingue **deux familles d'opérations**, et le choix du verbe ne dépend que de cette distinction :
 
-| Verbe | L'action… | Propriété | Exemples |
-|-------|-----------|-----------|----------|
-| **GET** | …ne fait que lire ou calculer, sans aucun effet de bord. | *Sûr* | `GET /user-activity?range=last-30-days`, `GET /forex:convert?from=EUR&to=USD&amount=100` |
-| **POST** | …crée une ressource ou une sous-ressource, ou déclenche un effet sur un service. | Non idempotent | `POST /teams:initiate`, `POST /teams/{id}/members:onboard`, `POST /auth:reset-password` |
-| **PATCH** | …modifie en place une ressource existante ; les paramètres éventuels passent dans le body. | — | `PATCH /orders/{id}:confirm`, `PATCH /users/{id}:activate` |
-| **PUT** | …remplace entièrement une ressource ou sous-ressource. | *Idempotent* | `PUT /users/{id}/preferences` |
-| **DELETE** | …supprime une ressource ou sous-ressource. | *Idempotent* | `DELETE /teams/{id}:disband`, `DELETE /teams/{id}/members/{mid}:fire` |
+> **Règle.** Une **action nommée** (`:{action}`) est toujours un **`GET`** si elle est *sûre* (lecture/calcul, aucun effet de bord), un **`POST`** dans tous les autres cas (création, transition d'état, mutation, opération de service). `PUT` et `DELETE` ne servent qu'à l'**accès CRUD direct** d'une ressource — sans verbe métier.
+
+Le suffixe `:{action}` porte l'**intention métier** ; le verbe HTTP ne porte plus que la **nature de l'effet** — sûr ou non. DORIAX s'engage à respecter la sémantique HTTP correspondante (sûreté et idempotence telles que définies par la RFC 9110, §9.2).
+
+**Verbes des actions nommées (`:{action}`)**
+
+| Verbe | L'action… | Propriété HTTP | Exemples |
+|-------|-----------|----------------|----------|
+| **GET** | …ne fait que lire ou calculer, sans aucun effet de bord. | *Sûr* (RFC 9110 §9.2.1) | `GET /forex:convert?from=EUR&to=USD&amount=100` |
+| **POST** | …produit un effet quelconque : crée une ressource, déclenche une transition d'état, modifie une ressource, ou exécute une opération de service. | Ni sûr ni idempotent (RFC 9110 §9.3.3) | `POST /teams:initiate`, `POST /orders/{id}:confirm`, `POST /users/{id}:activate`, `POST /teams/{id}:disband`, `POST /teams/{id}/members:onboard`, `POST /auth:reset-password` |
+
+**Verbes de l'accès CRUD direct (ressource nue, sans `:{action}`)**
+
+| Verbe | Opération | Propriété HTTP | Exemples |
+|-------|-----------|----------------|----------|
+| **GET** | Lecture d'une ressource ou d'une collection. | *Sûr* (RFC 9110 §9.2.1) | `GET /teams`, `GET /teams/{id}` |
+| **PUT** | Remplacement intégral d'une ressource ou sous-ressource. | *Idempotent* (RFC 9110 §9.3.4) | `PUT /users/{id}/preferences` |
+| **DELETE** | Suppression d'une ressource ou sous-ressource. | *Idempotent* (RFC 9110 §9.3.5) | `DELETE /users/{id}/preferences` |
 
 > **Précisions utiles :**
-> - **`GET` doit rester sûr** — aucun effet de bord. C'est précisément pourquoi `reset-password` est `POST` (il envoie un email) et `user-activity` est `GET`.
-> - **`DELETE` doit être idempotent** — un second appel sur une ressource déjà supprimée ne doit pas échouer (il renvoie `204`, jamais `404`).
-> - **`PATCH` n'est ni sûr ni idempotent** au sens de la RFC 5789. DORIAX ne s'impose donc pas l'idempotence sur `PATCH`, même si la plupart des transitions d'état (`:confirm`, `:activate`, `:demote`) le sont en pratique. Le body d'un `PATCH` DORIAX n'est pas un *patch document* au sens de la RFC 5789 : c'est une commande métier qui porte les paramètres de l'action.
-> - **`POST` ne sur-promet rien** : il signifie « traite cette représentation selon la sémantique de la ressource ». C'est ce qui en fait le verbe par défaut pour toute opération non couverte par les autres.
-> - **Service → `GET` ou `POST`** : `GET` s'il ne fait que lire, `POST` s'il produit un effet — `POST` n'étant retenu pour une lecture que lorsqu'un body est nécessaire (voir ci-dessous).
+> - **`GET` doit rester sûr** — aucun effet de bord. C'est précisément pourquoi `reset-password` est `POST` (il envoie un email) et `forex:convert` est `GET`.
+> - **`POST` ne sur-promet rien** : il signifie « traite cette représentation selon la sémantique de la cible ». Ni sûreté, ni idempotence, ni sémantique de body imposée. C'est exactement ce qui en fait le verbe universel des actions à effet — et la raison pour laquelle DORIAX n'emploie **ni `PATCH` ni `DELETE` comme verbes d'action** : leur sémantique propre (patch document pour `PATCH`, suppression pour `DELETE`) serait détournée, sans gain puisque l'intention est déjà nommée par le suffixe.
+> - **`PUT` et `DELETE` ne s'emploient que pour le CRUD nu** d'une ressource, là où aucun verbe métier ne s'impose (par exemple remplacer ou supprimer un bloc de préférences). Sur ce terrain, DORIAX respecte pleinement leur sémantique RFC : `PUT` est un remplacement intégral idempotent ; `DELETE` est idempotent — un second appel sur une ressource déjà absente renvoie `204`, **jamais `404`**.
+> - **Idempotence des actions `POST`** : la plupart des transitions d'état (`:confirm`, `:activate`, `:demote`) sont idempotentes côté métier, mais DORIAX ne l'exige pas au niveau HTTP, car `POST` ne le promet pas. Pour rendre une action rejouable sans risque (retries réseau), on s'appuie sur une clé d'idempotence portée par la requête (par exemple un en-tête `Idempotency-Key`), et non sur le verbe.
+> - **La création est toujours nommée** : DORIAX n'utilise pas le `POST /collection` nu (voir convention ci-dessous). La création prend la forme `POST /collection:{action}`.
 
 > **Note sur les `GET` avec body (`POST` utilisé à la place de `GET`) :** _Dans certains cas complexes, un appel `GET` peut nécessiter un payload. Cependant, certaines API REST empêchent de passer un body dans une requête `GET`. Dans ces situations, DORIAX privilégie `POST` pour ces requêtes tout en maintenant une logique métier explicite, afin de favoriser une API au vocabulaire métier explicite plutôt que technique._
+
+#### Nommage des actions
+
+Le séparateur `:` rend déterministe la **nature** du segment — nom ou verbe (voir §2.3) ; encore faut-il que le **verbe** lui-même soit nommé de façon cohérente, sans quoi deux équipes écriront trois mots différents pour la même intention, et le déterminisme s'arrête au `:`. Les contraintes de **forme** ci-dessous sont mécaniquement vérifiables (linter, passerelle) ; le **choix du bon verbe** relève du langage du domaine (*Ubiquitous Language*) et ne se contrôle qu'à la relecture.
+
+**Forme (vérifiable automatiquement)**
+- **`kebab-case`**, sans exception : `:reset-password`, `:process-invoices`.
+- **Verbe à l'impératif** : `:confirm`, jamais `:confirmation` (nom) ni `:confirmed` (état).
+- **Pas de préfixe redondant avec la cible** : `POST /orders/{id}:confirm`, jamais `:confirm-order` — la ressource est déjà dans le chemin.
+
+**Sens (relève du domaine)**
+- **Priorité au terme métier.** C'est la projection sur l'URL de la convention de code DORIAX (vocabulaire fonctionnel, pas technique) : `:disband` plutôt que `:delete`, `:onboard` plutôt que `:add-member`, `:initiate` plutôt que `:new`. Le verbe doit venir, autant que possible, du langage du *bounded context*.
+- **Repli générique toléré, jamais par défaut.** Lorsque le domaine n'offre honnêtement aucun terme spécifique, un verbe générique (`:update`, `:close`…) est acceptable — c'est un dernier recours assumé, pas un choix de facilité. La question à se poser d'abord reste toujours : *le métier a-t-il un mot pour ça ?*
+- **Harmoniser les verbes récurrents, sans liste fermée.** Pour les opérations transverses qui reviennent partout (créer, annuler, archiver…), il est recommandé qu'une équipe tienne un petit lexique de référence, afin d'éviter que `:cancel`, `:annul` et `:void` cohabitent pour une même intention. Ce lexique **guide**, il n'enferme pas : chaque contexte reste libre d'étendre avec son propre vocabulaire métier, qui prime toujours.
+
+> **Note — renommer un verbe, et le rôle de HDL.** _Faire porter l'intention par l'URL crée un couplage : corriger une coquille ou faire évoluer le terme métier change le chemin, et casse donc les clients qui l'ont codé en dur. Ce n'est pas propre à DORIAX — c'est une rupture de contrat d'API ordinaire, qui se traite par les pratiques habituelles de non-régression : exposer l'ancien chemin en alias, le déprécier, le versionner. Surtout, c'est précisément ce que **HDL** (encore à spécifier) neutralise : un client qui suit les liens hypermédia fournis dans les réponses, au lieu de construire les URL lui-même, absorbe ce changement de manière transparente._
 
 #### Convention DORIAX — toute création porte un nom métier
 
@@ -204,20 +231,26 @@ Le `POST /teams` nu de REST ne pourrait pas distinguer ces trois chemins, et con
 
 Cette section illustre les conventions de DORIAX avec des exemples concrets.
 
-**Exemples pour les ressources**
+**Exemples pour les ressources et leurs actions**
 - `GET /teams` → Obtient la liste des équipes.
 - `GET /teams/{id}` → Obtient une équipe spécifique.
 - `POST /teams:initiate` → Crée une équipe vierge (terme du domaine).
 - `POST /teams:import` → Crée une équipe à partir d'un annuaire (AD/LDAP).
 - `POST /teams:clone` → Crée une équipe par duplication d'une équipe existante.
 - `GET /users/{id}/security` → Obtient les paramètres de sécurité d'un utilisateur.
-- `PATCH /users/{id}/security:reset` → Réinitialise les paramètres de sécurité.
-- `PATCH /orders/{id}:confirm` → Confirme une commande.
-- `PATCH /users/{id}:activate` → Active un utilisateur.
-- `PATCH /products/{id}:discount` → Applique une réduction sur un produit.
+- `POST /users/{id}/security:reset` → Réinitialise les paramètres de sécurité.
+- `POST /orders/{id}:confirm` → Confirme une commande.
+- `POST /users/{id}:activate` → Active un utilisateur.
+- `POST /products/{id}:discount` → Applique une réduction sur un produit.
 - `POST /teams/{id}/members:onboard` → Ajoute un membre à une équipe avec onboarding.
-- `DELETE /teams/{id}/members/{mid}:fire` → Retire un membre de l'équipe.
-- `DELETE /teams/{id}:disband` → Dissout une équipe (terme du domaine).
+- `POST /teams/{id}/members/{mid}:fire` → Retire un membre de l'équipe (avec la logique métier associée).
+- `POST /teams/{id}:disband` → Dissout une équipe (terme du domaine).
+
+**Exemples d'accès CRUD direct (sans verbe métier)**
+- `PUT /users/{id}/preferences` → Remplace intégralement le bloc de préférences (idempotent).
+- `DELETE /users/{id}/preferences` → Supprime le bloc de préférences (idempotent).
+
+> _Note : `:fire` et `:disband` sont des **actions métier** (retrait d'un membre avec ses effets de bord, dissolution d'une équipe) — donc `POST`. Une suppression purement technique d'une donnée sans processus métier associé reste un `DELETE` nu sur la ressource. Le choix entre les deux dépend de la présence, ou non, d'un verbe métier qui porte des effets._
 
 **Exemples pour les services**
 - `POST /billing:process-invoices` → Lance un traitement global sur plusieurs factures.
@@ -227,13 +260,13 @@ Cette section illustre les conventions de DORIAX avec des exemples concrets.
 
 DORIAX suit les standards HTTP pour structurer ses réponses en apportant des précisions métier adaptées. Cette section fournit une vue des différentes réponses HTTP DORIAX, en regroupant les cas d'usage courants.
 
-| Action | Codes HTTP possibles | Contenu du payload |
-|--------|---------------------|-------------------|
-| **GET (récupération de données, ou POST remplaçant un GET nécessitant un body)** | `200 OK`, `403 Forbidden`, `404 Not Found` | Payload contenant la ressource demandée (format HAL ou autre format supporté) ou une erreur |
-| **POST (création de ressource)** | `201 Created`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | `Location` dans l'en-tête HTTP, et optionnellement un payload (HAL ou autre) contenant les liens vers la ressource créée |
-| **PATCH (modification d'une ressource)** | `200 OK`, `204 No Content`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | Aucun payload en cas de `204`, ou un payload (HAL ou autre) en cas de `200` si des informations complémentaires sont nécessaires |
-| **DELETE (suppression d'une ressource)** | `200 OK`, `204 No Content`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | `200 OK` si la ressource existait et a été supprimée (payload optionnel), `204 No Content` si la ressource était déjà inexistante ou s'il n'y a rien à retourner. **DELETE est idempotent : l'absence de la ressource ne produit pas de `404`.** |
-| **POST (action métier sur un service)** | `200 OK`, `202 Accepted`, `204 No Content`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | Aucun payload en cas de `204`, un payload (HAL ou autre) en cas de `200`, ou un lien de suivi en cas de `202` (requête asynchrone) |
+| Opération | Codes HTTP possibles | Contenu du payload |
+|-----------|---------------------|-------------------|
+| **GET** (lecture d'une ressource ou action sûre `:{action}`, ou `POST` remplaçant un `GET` nécessitant un body) | `200 OK`, `403 Forbidden`, `404 Not Found` | Payload contenant la ressource demandée (format HAL ou autre format supporté) ou une erreur |
+| **POST** — l'action **crée une ressource** (`POST /coll:{action}`) | `201 Created`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | `Location` dans l'en-tête HTTP, et optionnellement un payload (HAL ou autre) contenant les liens vers la ressource créée |
+| **POST** — l'action **produit un autre effet** (transition d'état, mutation, opération de service ; `:{action}`) | `200 OK`, `202 Accepted`, `204 No Content`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | Aucun payload en cas de `204`, un payload (HAL ou autre) en cas de `200`, ou un lien de suivi en cas de `202` (traitement asynchrone) |
+| **PUT** (remplacement d'une ressource — CRUD nu) | `200 OK`, `204 No Content`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | Aucun payload en cas de `204`, ou un payload (HAL ou autre) en cas de `200` |
+| **DELETE** (suppression d'une ressource — CRUD nu) | `200 OK`, `204 No Content`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | `200 OK` si la ressource existait et a été supprimée (payload optionnel), `204 No Content` si la ressource était déjà inexistante ou s'il n'y a rien à retourner. **DELETE est idempotent : l'absence de la ressource ne produit pas de `404`.** |
 | **Requête asynchrone (`202 Accepted`)** | `202 Accepted`, `400 Bad Request`, `403 Forbidden` | `Location` dans l'en-tête HTTP pour suivre le traitement, et optionnellement un payload (HAL ou autre) avec des liens HATEOAS |
 | **Erreur métier (`422 Unprocessable Entity`)** | `422 Unprocessable Entity` | Payload d'erreur en format HAL ou autre format supporté contenant les détails de l'erreur |
 
@@ -276,7 +309,7 @@ DORIAX suit les standards HTTP pour structurer ses réponses en apportant des pr
 
 4. **Erreur métier avec `422 Unprocessable Entity` :**
 
-   _Contexte : Un appel `PATCH /teams/42/members/22:demote` tente de rétrograder un membre **propriétaire** (`owner`) en **membre simple**. Cependant, il est le **seul propriétaire** restant de l'équipe, ce qui rend cette action invalide._
+   _Contexte : Un appel `POST /teams/42/members/22:demote` tente de rétrograder un membre **propriétaire** (`owner`) en **membre simple**. Cependant, il est le **seul propriétaire** restant de l'équipe, ce qui rend cette action invalide._
 
    ```http
    HTTP/1.1 422 Unprocessable Entity
@@ -288,7 +321,7 @@ DORIAX suit les standards HTTP pour structurer ses réponses en apportant des pr
          "code": "LAST_OWNER_RESTRICTION",
          "message": "Cannot demote the last owner of the team.",
          "_links": {
-           "origin": { "href": "/teams/42/members/22:demote", "method": "PATCH" },
+           "origin": { "href": "/teams/42/members/22:demote", "method": "POST" },
            "about": { "href": "http://example.com/docs/errors/last-owner-restriction" }
          }
        }
@@ -296,7 +329,7 @@ DORIAX suit les standards HTTP pour structurer ses réponses en apportant des pr
    }
    ```
 
-**Note — format d'erreur et standard IETF.** _Le format présenté ici (`{ "errors": [ … ] }`) est un format maison enrichi de liens hypermédia. Le standard IETF pour les erreurs HTTP est la **RFC 9457** (« Problem Details for HTTP APIs », qui a remplacé la RFC 7807 en juillet 2023), avec le média type `application/problem+json` et les champs `type`, `title`, `status`, `detail`, `instance`. DORIAX reste compatible avec ce standard ; le format retenu ici en est une variation délibérée. À défaut d'une bonne raison de diverger, s'aligner sur la RFC 9457 facilite l'interopérabilité et l'outillage._
+**Note — format d'erreur et standard IETF.** _Le format présenté ici (`{ "errors": [ … ] }`) est un format maison enrichi de liens hypermédia. Le standard IETF pour les erreurs HTTP est la **RFC 9457** (« Problem Details for HTTP APIs », qui a remplacé la RFC 7807 en juillet 2023), avec le média type `application/problem+json` et les champs `type`, `title`, `status`, `detail`, `instance`. DORIAX reste compatible avec ce standard ; le format retenu ici en est une variation délibérée. À défaut d'une bonne raison de diverger, s'aligner sur la RFC 9457 facilite l'interopérabilité et l'outillage. (La spécification complète de la gestion des erreurs reste à définir.)_
 
 👉 **Référence complète sur les codes HTTP** : [MDN HTTP Response Status Codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status).
 
@@ -304,7 +337,7 @@ DORIAX suit les standards HTTP pour structurer ses réponses en apportant des pr
 
 DORIAX applique naturellement une séparation entre les opérations de lecture et d'écriture, ce qui rejoint le principe de Command Query Responsibility Segregation (CQRS). Cependant, cette approche ne doit pas être perçue comme une contrainte lourde nécessitant une infrastructure complexe avec plusieurs bases de données.
 
-Dans DORIAX, CQRS se traduit par une simple distinction logique entre les actions qui modifient l'état du système et celles qui récupèrent des informations. Une écriture (`POST`, `PATCH`, `DELETE`) ne renvoie pas la représentation complète et mise à jour de la ressource ; elle se limite à un statut HTTP confirmant l'opération, accompagné le cas échéant de liens hypermédia ou d'un identifiant de suivi (par exemple le `Location` d'un `201` ou le lien de statut d'un `202`). L'application effectue ensuite un appel `GET` si elle a besoin d'obtenir les nouvelles données.
+Dans DORIAX, CQRS se traduit par une simple distinction logique entre les actions qui modifient l'état du système et celles qui récupèrent des informations. Une écriture (`POST`, `PUT`, `DELETE`) ne renvoie pas la représentation complète et mise à jour de la ressource ; elle se limite à un statut HTTP confirmant l'opération, accompagné le cas échéant de liens hypermédia ou d'un identifiant de suivi (par exemple le `Location` d'un `201` ou le lien de statut d'un `202`). L'application effectue ensuite un appel `GET` si elle a besoin d'obtenir les nouvelles données.
 
 Cette séparation présente plusieurs avantages :
 
