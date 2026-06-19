@@ -1,4 +1,4 @@
-# HDL — Gestion des erreurs
+# Erreurs
 
 Format des réponses d'erreur de **Hypermedia Domain Language (HDL)**, un format de représentation fondé sur **HTTP et JSON**. Les erreurs HDL sont des objets JSON servis avec le type de média `application/problem+json` : elles forment un **sur-ensemble du RFC 9457 (*Problem Details for HTTP APIs*)**, dont elles reprennent les membres et qu'elles complètent là où il est lacunaire — erreurs multiples, localisation au champ, code applicatif stable, hypermédia. Le vocabulaire `_links` / `_metadata` est commun aux réponses de succès HDL : un seul modèle, un seul parseur.
 
