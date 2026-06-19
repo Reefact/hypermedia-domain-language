@@ -284,6 +284,8 @@ DORIAX suit les standards HTTP pour structurer ses réponses en apportant des pr
 
 **Note — concurrence optimiste (`ETag` / `If-Match` / `412`).** _Le `409` « version obsolète » évoqué ci-dessus suppose un mécanisme pour détecter le conflit. DORIAX recommande le standard HTTP : le serveur expose un `ETag` sur le `GET`, le client le renvoie dans `If-Match` sur l'écriture suivante ; si la ressource a changé entre-temps, le serveur répond `412 Precondition Failed` (ou `428 Precondition Required` s'il exige l'en-tête). C'est, côté lecture/écriture, le pendant de la clé d'idempotence vue côté rejouabilité (§3.1)._
 
+**Note — corps porteur du résultat (écriture à résultat non re-lisible).** _Les lignes du tableau supposent qu'un `201`/`200` ne transporte que des liens vers une ressource par ailleurs consultable. Une classe étroite d'écritures y fait exception : celles dont le corps porte un **résultat qu'aucune lecture ultérieure ne réexpose** — secret affiché une seule fois, token à usage unique, artefact généré non interrogeable (p. ex. `POST /api-keys:create` renvoyant la clé en clair). Pour elles, le corps n'est pas un confort mais **l'unique résultat de l'opération**, et `return=minimal` n'y est pas le défaut. Voir §3.4, « Exception : l'écriture dont le corps est le résultat »._
+
 #### Exemples détaillés
 
 1. **Création réussie :**
@@ -343,7 +345,7 @@ DORIAX suit les standards HTTP pour structurer ses réponses en apportant des pr
 
 ### 3.4 Séparation commande / requête
 
-DORIAX sépare nettement les opérations qui **modifient** l'état du système (les commandes) de celles qui le **lisent** (les requêtes). Cette discipline est la **séparation commande/requête (CQS)** appliquée au niveau de l'API : une opération change l'état *ou* renvoie une donnée, elle ne fait pas les deux à la fois.
+DORIAX sépare nettement les opérations qui **modifient** l'état du système (les commandes) de celles qui le **lisent** (les requêtes). Cette discipline est la **séparation commande/requête (CQS)** appliquée au niveau de l'API : une opération change l'état *ou* renvoie une donnée, elle ne fait pas les deux à la fois — à une réserve près, bornée et nommée plus bas, pour le résultat qu'une écriture est seule à produire et qu'aucune lecture ne reconstitue.
 
 **CQS (et non CQRS).** _DORIAX applique la séparation commande/requête (CQS) au seul niveau des opérations : une règle de conception, sans infrastructure dédiée ni second modèle. CQRS (Command Query Responsibility Segregation) va plus loin — deux **modèles** distincts, un côté écriture validé par le domaine, un côté lecture en projections, éventuellement sur un autre store et en cohérence différée — et DORIAX s'en tient en deçà. CQS **prépare le terrain** pour un CQRS ultérieur tout en restant une étape autonome. La distinction est structurelle autant que terminologique : elle conditionne la garantie de relecture décrite plus bas._
 
@@ -379,9 +381,25 @@ Ce choix de défaut découle de CQS (une commande ne renvoie pas de donnée), ma
 
 Par exemple, après `POST /teams/42/members:onboard`, on récupère en général les seules informations utiles via `GET /teams/42/members/33` plutôt que de recharger toute la liste — sauf si l'application a réellement besoin de l'entité, auquel cas elle l'obtient directement avec `Prefer: return=representation` sur l'écriture, ou la liste complète via un `GET` explicite.
 
+#### Exception : l'écriture dont le corps *est* le résultat
+
+Le défaut « minimum utile » et la relecture par `GET` reposent sur une prémisse tacite : **le résultat d'une écriture est reconstructible par une lecture ultérieure**. Une classe étroite d'écritures la met en défaut — celles qui produisent, *au moment de l'acte*, une valeur qu'aucune lecture ne réexpose :
+
+- un **secret affiché une seule fois** : la clé en clair renvoyée par `POST /api-keys:create`, qui n'est plus jamais ré-exposée ensuite (seule son empreinte est conservée côté serveur) ;
+- un **token à usage unique** ou un code de récupération ;
+- un **artefact généré** non persisté sous une forme interrogeable.
+
+Pour cette classe, le corps de réponse n'est pas un confort qui éviterait un `GET` : il est l'**unique résultat de l'opération**. Trois conséquences, qui sont autant de **renversements** du défaut :
+
+- **`return=minimal` n'y est pas le défaut.** La réponse porte le matériel produit ; un client qui la perd n'a **aucun recours** — aucun `GET` ne le lui rendra. C'est le seul cas où une commande renvoie légitimement une donnée substantielle, et la réserve annoncée en tête de section.
+- **La relecture ne s'applique pas.** Le pattern « écris puis relis » (ci-dessous) suppose un résultat re-lisible ; ici, par construction, il n'y en a pas.
+- **Le corps fait partie du résultat idempotent.** Comme rien ne réexpose la valeur, un rejeu de la même requête (même `Idempotency-Key`, §3.1) doit la **restituer à l'identique** : pour cette classe — et pour elle seule — la réponse est mémorisée et rejouée *verbatim*. Le détail du mécanisme relève de la spécification d'idempotence ; do-rest se borne à poser que, pour ces écritures, le corps est constitutif de l'issue.
+
+**Cadrage.** DORIAX traite ce cas comme une **exception nommée et bornée** à la règle d'écriture, et non en le requalifiant en service (§2.2) : ouvrir la voie « service » à toute écriture désireuse de renvoyer un corps réintroduirait le couplage action↔représentation que la §3.4 écarte. La question à se poser d'abord reste : *cette valeur est-elle réellement non reconstructible par une lecture ?* Si une lecture peut la rendre, l'écriture suit le défaut — minimal, puis `GET`.
+
 #### Relecture et cohérence (read-after-write)
 
-La règle « écris, puis relis » suppose que le `GET` qui suit une écriture renvoie bien l'état que cette écriture vient de produire. **C'est vrai tant que le modèle de lecture est immédiatement cohérent** — ce qui est le cas en CQS pur, où lecture et écriture partagent le même modèle. Le jour où une API évoluerait vers un vrai CQRS avec lecture en cohérence différée, ce `GET` pourrait renvoyer un état antérieur : le pattern de relecture immédiate cesserait alors d'être sûr et devrait être traité (jeton de version, attente de propagation, ou lien de suivi). DORIAX reste en CQS et ne contracte donc pas cette difficulté ; il la signale pour que le passage éventuel à CQRS soit fait en connaissance de cause.
+La règle « écris, puis relis » suppose deux choses. D'abord que le résultat *soit* re-lisible : la classe décrite à l'exception ci-dessus y échappe par construction. Ensuite que le `GET` qui suit une écriture renvoie bien l'état que cette écriture vient de produire. **C'est vrai tant que le modèle de lecture est immédiatement cohérent** — ce qui est le cas en CQS pur, où lecture et écriture partagent le même modèle. Le jour où une API évoluerait vers un vrai CQRS avec lecture en cohérence différée, ce `GET` pourrait renvoyer un état antérieur : le pattern de relecture immédiate cesserait alors d'être sûr et devrait être traité (jeton de version, attente de propagation, ou lien de suivi). DORIAX reste en CQS et ne contracte donc pas cette difficulté ; il la signale pour que le passage éventuel à CQRS soit fait en connaissance de cause.
 
 #### Et HDL
 
