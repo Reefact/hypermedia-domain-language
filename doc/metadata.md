@@ -8,7 +8,7 @@ Dans Hypermedia Domain Language (HDL), une réponse transporte deux natures d'in
 
 > **En clair —** `_metadata` parle de *la réponse* — sa traçabilité, son horodatage, sa version, ou toute autre information sur l'**échange** — pas du *contenu métier*. Un champ qui décrit la ressource n'a rien à y faire ; un champ qui décrit l'appel y a sa place.
 
-## Pourquoi le préfixe `_` ?
+## Le préfixe `_` : un membre réservé
 
 Comme `_links`, `_metadata` est un **membre structurel réservé** de HDL, distinct des données métier. Le préfixe `_` :
 
