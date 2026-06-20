@@ -1,213 +1,107 @@
 # Pagination
 
-## Introduction
+## Principe
 
-La pagination est une fonctionnalité essentielle pour gérer efficacement les collections volumineuses dans une API. En utilisant la pagination, les résultats sont divisés en plusieurs pages, ce qui améliore la performance et la lisibilité des réponses. 
+Une collection-ressource renvoie ses éléments par **tranches**. En HDL, la pagination repose sur deux mécanismes complémentaires :
 
-HDL inclut une structure de pagination flexible qui permet aux utilisateurs de naviguer facilement à travers les pages des collections de données.
+- la **navigation par liens** (`first`, `prev`, `next`, `last`) — le **contrat** : le client suit les liens, il ne fabrique jamais d'URL ;
+- l'objet **`_pagination`** — une **aide d'affichage** optionnelle : totaux, numéro de tranche courante, taille de tranche, lorsqu'ils sont disponibles.
 
-## Concepts Généraux
+HDL est **agnostique de la stratégie de pagination du serveur**. Le client suit `next.href` sans savoir si l'URL contient `?page=3` ou `?after=<curseur>` : le serveur choisit son mécanisme, le client n'en voit rien.
 
-### Structure des éléments de la collection
+> **En clair —** ce que le client fait, c'est **suivre des liens**. Comment le serveur récupère la tranche derrière ces liens ne le regarde pas.
 
-Les éléments de la collection doivent se trouver dans un objet `Items`. Chaque élément représente une ressource HDL.
+## La navigation : le contrat
 
-```json
-{
-  "items": [
-    {
-      "id": "1",
-      "title": "Article 1",
-      "description": "Content of article 1.",
-      "_links": {
-        "self": { "href": "http://example.com/articles/1" }
-      }
-    },
-    {
-      "id": "2",
-      "title": "Article 2",
-      "description": "Content of article 2.",
-      "_links": {
-        "self": { "href": "http://example.com/articles/2" }
-      }
-    }
-    // Autres articles...
-  ]
-}
-```
+Les liens de navigation vivent dans `_links` :
 
-### Liens de Pagination
+- `next` / `prev` — la tranche suivante / précédente. **Toujours** le moyen de parcourir, quelle que soit la stratégie. `prev` est absent sur la première tranche, `next` sur la dernière.
+- `first` / `last` — les extrémités. Présents **lorsque la collection peut les atteindre** : `last` suppose que le serveur connaît la fin (un total, ou une borne de dernière tranche).
 
-HDL utilise des liens hypermedia pour permettre la navigation entre les différentes pages d'une collection. Ces liens incluent :
-- `self` : Lien vers la page actuelle.
-- `first` : Lien vers la première page.
-- `last` : Lien vers la dernière page.
-- `prev` : Lien vers la page précédente.
-- `next` : Lien vers la page suivante.
-- `pages` : Liens vers les pages environnantes, déterminées par la valeur de la métadonnée fournie par la propriété de pagination `span` (voir ci-après).
+Le client suit ces liens tels quels. Une URL de page (`?page=3`) ou de curseur (`?after=xyz`) lui est **opaque** : il ne lit que `href`.
 
-### Métadonnées de Pagination
+## `_pagination` : l'aide d'affichage
 
-Les métadonnées de pagination fournissent des informations supplémentaires sur la collection paginée, telles que :
-- `totalItems` : Le nombre total d'éléments dans la collection.
-- `pageSize` : Le nombre d'éléments par page.
-- `currentPage` : Le numéro de la page actuelle.
-- `totalPages` : Le nombre total de pages.
-- `span` : Le nombre de liens de pages à inclure autour de la page actuelle. Si `span` n'est pas précisé, les liens de pages environnantes n'apparaissent pas.
+`_pagination` est un **membre réservé optionnel** qui décrit la tranche, pour que le client l'affiche sans rien calculer. Ses champs sont **tous optionnels** et dépendent de ce que la collection sait fournir :
 
-## Détails des Éléments de Pagination
+- `pageSize` — la taille d'une tranche ;
+- `totalItems` — le nombre total d'éléments, **si le serveur le connaît** ;
+- `totalPages` — le nombre de tranches, dérivé de `totalItems` et `pageSize` ;
+- `currentPage` — le numéro de la tranche courante, **si la collection est numérotée**.
 
-### Liens de Pagination
+Une collection inclut **ce qu'elle peut**, rien de plus. Ces champs ne sont pas le contrat : la navigation l'est. Un client peut ignorer `_pagination` entièrement et se contenter de `next`/`prev`.
 
-Les liens de pagination sont des hyperliens standard qui utilisent les relations de pagination prédéfinis par HDL. Par exemple :
+## Capacités, pas stratégie
+
+Ce qu'une collection expose ne dépend pas de *comment* le serveur pagine, mais de **deux capacités** qu'elle a ou non :
+
+- **le total** — le serveur connaît (et accepte de payer) le compte des éléments → `totalItems` / `totalPages`, et un `last` ;
+- **le saut** — le client peut atteindre une tranche arbitraire → un pager numéroté, le numéro de tranche étant un paramètre de vue réglable comme les autres critères.
+
+Une collection peut avoir les deux (pager « 1 2 3 … 47 »), une seule, ou aucune (parcours « charger plus », `next` seul).
+
+> **Le numéro de page est un marqueur de capacité, pas de stratégie.** Afficher « page 1, 2, 3… » n'impose **pas** l'offset côté serveur : il faut seulement un **total** et de quoi **sauter** à une tranche. Un serveur peut servir un pager numéroté par keyset (bornes de tranche pré-calculées) sans aucun `OFFSET`. Le client n'y voit que des liens et des numéros.
+
+## Les trois stratégies serveur, et leur place dans HDL
+
+Côté serveur, trois familles — invisibles au client :
+
+| Stratégie | URL typique | Force | Limite | En HDL |
+|---|---|---|---|---|
+| **Offset / page** | `?page=2&pageSize=10` | saut et total faciles | lent sur gros offsets, instable sous écritures concurrentes | `first`/`prev`/`next`/`last`, `_pagination` complet |
+| **Keyset / curseur** | `?after=<curseur>` | stable, rapide à l'échelle | pas de saut ni de total faciles | `next`/`prev`, `_pagination` minimal (ni `last`, ni total) |
+| **Token de continuation** | `?pageToken=…` | comme le keyset | comme le keyset | comme le keyset |
+
+La stratégie ne change **que** deux choses : **quelles capacités** la collection expose (total, saut), et **ce que contiennent les `href`**. Le contrat — suivre les liens — reste identique.
+
+## Exemples
+
+**Pagination par page — pager numéroté complet** (capacités : total + saut)
 
 ```json
 {
-  "self": {
-    "method": "GET",
-    "href": "http://example.com/articles?page=2",
-    "title": "Current Page"
-  },
-  "first": { "href": "http://example.com/articles?page=1" },
-  "prev": { "href": "http://example.com/articles?page=1" },
-  "next": { "href": "http://example.com/articles?page=3" },
-  "last": { "href": "http://example.com/articles?page=10" }
-}
-```
-
-Si un lien de pagination n'est pas navigable, il ne doit pas apparaître. Par exemple:
-
-- si l'utilisateur est sur la page 1 et qu'il y a 10 pages au total, seuls `self`, `first`, `next`, et `last` doivent apparaître
-- si la collection ne contient qu'une seule page, seuls `self`, `first`, et `last` doivent apparaître
-
-### Métadonnées de Pagination
-
-Les métadonnées fournissent un contexte clair sur la taille de la collection et la position actuelle dans la pagination. Par exemple :
-
-```json
-{
-  "pagination": {
-    "totalItems": 100,
-    "pageSize": 10,
-    "currentPage": 2,
-    "totalPages": 10,
-    "span": 5
-  }
-}
-```
-
-### Liens de Pages avec Span
-
-Les liens de pages environnantes (span) sont déterminés par la valeur de la métadonnée `span`. Par exemple, si `currentPage` est 50 et `span` est 3, les liens incluront les pages 47 à 49 et 51 à 53 :
-
-```json
-{
-  "pages": [
-    {
-      "name": "47",
-      "href": "http://example.com/articles?page=47"
-    },
-    {
-      "name": "48",
-      "href": "http://example.com/articles?page=48"
-    },
-    {
-      "name": "49",
-      "href": "http://example.com/articles?page=49"
-    },
-    {
-      "name": "51",
-      "href": "http://example.com/articles?page=51"
-    },
-    {
-      "name": "52",
-      "href": "http://example.com/articles?page=52"
-    },
-    {
-      "name": "53",
-      "href": "http://example.com/articles?page=53"
-    }
-  ]
-}
-```
-
-
-De même que précédemment, si un lien de pagination n'est pas navigable, il ne doit pas apparaître. Par exemple:
-
-- si l'utilisateur est sur la page 1, qu'il y a 10 pages au total et que le span est a 3, seuls `self`, `first`, `next`, `last`, ainsi que les `pages` 2, 3, et 4 doivent apparaître
-
-## Mise en Application Complète
-
-Voici un exemple complet de la pagination dans HDL, incluant les liens de pagination, les métadonnées et les liens de pages environnantes.
-
-### Exemple Complet
-
-```json
-{
-  "items": [
-    {
-      "id": "1",
-      "title": "Article 1",
-      "description": "Content of article 1.",
-      "_links": {
-        "self": { "href": "http://example.com/articles/1" }
-      }
-    },
-    {
-      "id": "2",
-      "title": "Article 2",
-      "description": "Content of article 2.",
-      "_links": {
-        "self": { "href": "http://example.com/articles/2" }
-      }
-    }
-    // Autres articles...
+  "articles": [
+    { "title": "Article 21", "_links": { "self": { "href": "http://example.com/articles/21" } } }
   ],
   "_links": {
-    "self": { "href": "http://example.com/articles?page=50" },
+    "self":  { "href": "http://example.com/articles?page=3" },
     "first": { "href": "http://example.com/articles?page=1" },
-    "prev": { "href": "http://example.com/articles?page=49" },
-    "next": { "href": "http://example.com/articles?page=51" },
-    "last": { "href": "http://example.com/articles?page=100" },
-    "pages": [
-      {
-        "name": "47",
-        "href": "http://example.com/articles?page=47"
-      },
-      {
-        "name": "48",
-        "href": "http://example.com/articles?page=48"
-      },
-      {
-        "name": "49",
-        "href": "http://example.com/articles?page=49"
-      },
-      {
-        "name": "51",
-        "href": "http://example.com/articles?page=51"
-      },
-      {
-        "name": "52",
-        "href": "http://example.com/articles?page=52"
-      },
-      {
-        "name": "53",
-        "href": "http://example.com/articles?page=53"
-      }
-    ]
+    "prev":  { "href": "http://example.com/articles?page=2" },
+    "next":  { "href": "http://example.com/articles?page=4" },
+    "last":  { "href": "http://example.com/articles?page=100" }
   },
-  "pagination": {
-    "totalItems": 1000,
+  "_pagination": {
     "pageSize": 10,
-    "currentPage": 50,
+    "totalItems": 1000,
     "totalPages": 100,
-    "span": 3
+    "currentPage": 3
   }
 }
 ```
 
-Note: Si `span` n'est pas précisé les hyperliens `pages` ne seront pas fournis.
+**Pagination par curseur — parcours « charger plus »** (aucune des deux capacités)
 
-### Conclusion
+```json
+{
+  "articles": [
+    { "title": "Article 21", "_links": { "self": { "href": "http://example.com/articles/21" } } }
+  ],
+  "_links": {
+    "self": { "href": "http://example.com/articles?after=eyJpZCI6MjB9" },
+    "next": { "href": "http://example.com/articles?after=eyJpZCI6MzB9" }
+  },
+  "_pagination": {
+    "pageSize": 10
+  }
+}
+```
 
-L'intégration de la pagination dans HDL améliore la gestion des collections volumineuses en fournissant une navigation plus contextuelle et intuitive. En utilisant des liens hypermedia pour naviguer entre les pages et des métadonnées pour donner un contexte clair sur la pagination, HDL offre une solution complète et flexible pour gérer efficacement les collections de données dans une API RESTful.
+Le second n'a ni `first`/`last`, ni totaux, ni `currentPage` : la collection ne sait ni compter ni sauter. Le client affiche « charger plus » et suit `next`. **Même contrat, capacités différentes.**
+
+## Récapitulatif
+
+- La **navigation par liens** (`next`/`prev`, et `first`/`last` si la collection sait sauter) est le **contrat** : le client suit, il ne fabrique pas.
+- **`_pagination`** est une **aide d'affichage optionnelle** ; ses champs (`pageSize`, `totalItems`, `totalPages`, `currentPage`) sont présents **selon les capacités** de la collection.
+- HDL est **agnostique de la stratégie serveur** (offset, curseur, token) : elle ne détermine que les capacités exposées et le contenu des `href`, jamais le contrat.
+
+Voir : [Collections](collection.md).
