@@ -2,122 +2,91 @@
 
 ## Introduction
 
-La gestion du filtrage est essentielle pour permettre aux utilisateurs de restreindre les résultats selon certains critères. En utilisant les fonctionnalités de filtrage, les résultats peuvent être affinés pour répondre aux besoins spécifiques des utilisateurs. HDL inclut une structure flexible de filtrage qui permet aux utilisateurs de spécifier les critères de filtrage de manière simple et claire.
+Le filtrage restreint les éléments d'une collection selon des critères. Un critère se transmet sous la forme `filter[propriété]=valeur`.
 
-## Concepts Généraux
+## Sémantique
 
-### Liens de Filtrage
+HDL s'en tient à l'**égalité**, avec une combinaison **explicite** :
 
-HDL utilise des liens hypermedia pour permettre aux clients de spécifier des critères de filtrage. Ces liens incluent des paramètres de requête pour définir les critères. Les paramètres de filtrage sont ajoutés à l'URL sous la forme `filter[#property]=#value`. Pour plusieurs valeurs d'un même critère, les valeurs sont séparées par des virgules.
+- plusieurs valeurs d'un même critère, séparées par des virgules, se combinent en **OU** — `filter[author]=John,Jane` sélectionne les articles dont l'auteur est John *ou* Jane ;
+- plusieurs critères distincts se combinent en **ET** — `filter[author]=John,Jane&filter[genre]=Fiction` exige les deux.
 
-**Exemple de Liens de Filtrage**
+HDL ne définit **pas** d'opérateurs (`≥`, `≠`, plages), pas de OU entre critères, pas de négation. Un besoin de requêtage plus riche relève d'un langage dédié (RSQL, OData) et sort du périmètre de HDL.
+
+## Liens : composer et naviguer
+
+`_links` porte deux usages distincts :
+
+- **composer** un filtre — un lien **templated** que le client remplit ;
+- **naviguer** les résultats — `first` / `prev` / `self` / `next` / `last`, qui conservent les filtres **déjà appliqués**.
 
 ```json
 {
-  "self": {
-    "href": "http://example.com/articles?page=1&filter[author]=John,Jane&filter[genre]=Fiction"
-  },
-  "first": {
-    "href": "http://example.com/articles?page=1&filter[author]=John,Jane&filter[genre]=Fiction"
-  },
-  "last": {
-    "href": "http://example.com/articles?page=100&filter[author]=John,Jane&filter[genre]=Fiction"
-  },
-  "next": {
-    "href": "http://example.com/articles?page=2&filter[author]=John,Jane&filter[genre]=Fiction"
+  "_links": {
+    "filter": { "href": "http://example.com/articles{?filter}", "templated": true },
+    "first":  { "href": "http://example.com/articles?page=1&filter[author]=John,Jane&filter[genre]=Fiction" },
+    "prev":   { "href": "http://example.com/articles?page=2&filter[author]=John,Jane&filter[genre]=Fiction" },
+    "self":   { "href": "http://example.com/articles?page=3&filter[author]=John,Jane&filter[genre]=Fiction" },
+    "next":   { "href": "http://example.com/articles?page=4&filter[author]=John,Jane&filter[genre]=Fiction" },
+    "last":   { "href": "http://example.com/articles?page=24&filter[author]=John,Jane&filter[genre]=Fiction" }
   }
 }
 ```
 
-### Métadonnées de Filtrage
+> Le client compose un filtre via le lien `filter` (templated). HDL **n'expose pas** la liste des champs filtrables ni leurs types : composer un filtre suppose la connaissance du domaine, partagée avec le client. La forme par champ `filter[propriété]=valeur` est conventionnelle (un gabarit RFC 6570 ne l'exprime pas nativement) ; le lien `filter` signale surtout que le filtrage est disponible.
 
-Les métadonnées de filtrage fournissent des informations sur les critères de filtrage actuellement appliqués à la collection. Cela inclut les propriétés filtrées et les valeurs appliquées. Ces informations peuvent être utilisées par le client (par exemple, le front-end) pour afficher correctement les filtres appliqués à l'utilisateur, tandis que les liens sont utilisés pour la navigation.
+## L'état appliqué : `_filter`
 
-**Exemple de Métadonnées de Filtrage**
+`_filter` expose les critères **actuellement appliqués**, sous forme parsée, pour que le client les affiche sans analyser d'URL. C'est un **membre réservé** (préfixe `_`). Les liens servent à naviguer, `_filter` sert à afficher.
 
 ```json
 {
-  "filter": [
-    {
-      "property": "author",
-      "values": ["John", "Jane"]
-    },
-    {
-      "property": "genre",
-      "values": ["Fiction"]
-    }
+  "_filter": [
+    { "property": "author", "values": ["John", "Jane"] },
+    { "property": "genre",  "values": ["Fiction"] }
   ]
 }
 ```
 
-## Mise en Application Complète
-
-Voici un exemple complet de la gestion du filtrage dans HDL, incluant les liens de filtrage et les métadonnées associées.
-
-**Exemple Complet**
+## Exemple complet
 
 ```json
 {
-  "items": [
+  "articles": [
     {
-      "id": "1",
       "title": "Article 1",
       "description": "Content of article 1.",
-      "_links": {
-        "self": {
-          "href": "http://example.com/articles/1"
-        }
-      }
+      "author": "John",
+      "genre": "Fiction",
+      "_links": { "self": { "href": "http://example.com/articles/1" } }
     },
     {
-      "id": "2",
       "title": "Article 2",
       "description": "Content of article 2.",
-      "_links": {
-        "self": {
-          "href": "http://example.com/articles/2"
-        }
-      }
+      "author": "Jane",
+      "genre": "Fiction",
+      "_links": { "self": { "href": "http://example.com/articles/2" } }
     }
-    // Autres articles...
   ],
   "_links": {
-    "self": {
-      "href": "http://example.com/articles?page=1&filter[author]=John,Jane&filter[genre]=Fiction"
-    },
-    "first": {
-      "href": "http://example.com/articles?page=1&filter[author]=John,Jane&filter[genre]=Fiction"
-    },
-    "last": {
-      "href": "http://example.com/articles?page=1&filter[author]=John,Jane&filter[genre]=Fiction"
-    }
+    "filter": { "href": "http://example.com/articles{?filter}", "templated": true },
+    "first":  { "href": "http://example.com/articles?page=1&filter[author]=John,Jane&filter[genre]=Fiction" },
+    "prev":   { "href": "http://example.com/articles?page=2&filter[author]=John,Jane&filter[genre]=Fiction" },
+    "self":   { "href": "http://example.com/articles?page=3&filter[author]=John,Jane&filter[genre]=Fiction" },
+    "next":   { "href": "http://example.com/articles?page=4&filter[author]=John,Jane&filter[genre]=Fiction" },
+    "last":   { "href": "http://example.com/articles?page=24&filter[author]=John,Jane&filter[genre]=Fiction" }
   },
-  "pagination": {
-    "totalItems": 10,
+  "_pagination": {
+    "totalItems": 240,
     "pageSize": 10,
-    "currentPage": 1,
-    "totalPages": 1
+    "currentPage": 3,
+    "totalPages": 24
   },
-  "filter": [
-    {
-      "property": "author",
-      "values": ["John", "Jane"]
-    },
-    {
-      "property": "genre",
-      "values": ["Fiction"]
-    }
+  "_filter": [
+    { "property": "author", "values": ["John", "Jane"] },
+    { "property": "genre",  "values": ["Fiction"] }
   ]
 }
 ```
 
-## Conclusion
-
-L'intégration du filtrage multiples dans HDL améliore la gestion des collections volumineuses en fournissant une navigation contextuelle et intuitive. En utilisant des liens hypermedia et des métadonnées spécifiques, HDL offre une solution flexible et claire pour gérer efficacement les collections de données dans une API RESTful. 
-
-**Flexibilité et Clarté** :
-   - Les clients peuvent facilement appliquer des critères de filtrage multiples en suivant les liens hypermedia fournis.
-   - Les métadonnées de filtrage fournissent un contexte clair sur les critères appliqués à la collection actuelle.
-
-**Simplicité d'Intégration** :
-   - La structure proposée est simple à intégrer et à utiliser, en maintenant la compatibilité avec le reste du format HDL tout en ajoutant des fonctionnalités précieuses.
+Voir : [Collections](collection.md).
