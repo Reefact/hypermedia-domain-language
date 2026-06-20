@@ -258,7 +258,7 @@ Une **URI** documentant ce type de sous-erreur (même rôle que le `type` global
 
 **À quoi ça sert.** Les regrouper dans un **objet** extensible dont le contenu dépend du serveur.
 
-**Pourquoi un objet `_metadata`, et non des membres à plat ?** Le RFC 9457 mettrait ces champs à la racine. HDL les regroupe pour deux raisons : (1) `_metadata` est **l'enveloppe d'observabilité commune aux réponses de succès HDL** — mêmes clés, même parseur, succès et erreurs confondus ; (2) cela **isole** ces champs serveur des membres standard de 9457, évitant toute collision si le standard s'enrichit. Le préfixe `_`, comme pour `_links`, signale un membre **structurel** HDL (réservé), distinct des données métier.
+Les métadonnées d'observabilité forment un objet **`_metadata`** — membre **réservé** (préfixe `_`, comme `_links`), distinct des données métier et des membres standard de 9457. C'est la même enveloppe que sur les réponses de succès HDL : même membre, même rôle (voir [Métadonnées](metadata.md)).
 
 ```json
 {
