@@ -1,4 +1,4 @@
-# Recherche dans une collection de ressources
+# Recherche plain-text
 
 ## Introduction
 
