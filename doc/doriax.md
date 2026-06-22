@@ -185,7 +185,7 @@ Le suffixe `:{action}` porte l'**intention métier** ; le verbe HTTP ne porte pl
 > - **`GET` doit rester sûr** — aucun effet de bord. C'est précisément pourquoi `reset-password` est `POST` (il envoie un email) et `forex:convert` est `GET`.
 > - **`POST` ⇒ effet, à une seule exception près.** L'unique entorse à la règle « `POST` ⇒ effet » est le `POST` employé comme *transport* d'un `GET` qui exige un body (voir la note plus bas) : ce `POST` ne produit aucun effet et **reste sûr**. L'entorse est purement technique — le verbe pallie une limite d'outillage — et l'opération demeure sémantiquement une lecture. La table ci-dessus décrit le cas nominal ; ce cas en est l'exception documentée.
 > - **`POST` ne sur-promet rien** : il signifie « traite cette représentation selon la sémantique de la cible ». Ni sûreté, ni idempotence, ni sémantique de body imposée. C'est exactement ce qui en fait le verbe universel des écritures — et la raison pour laquelle DORIAX n'emploie **aucun autre verbe d'écriture** : la sémantique propre de `PATCH` (patch document), `PUT` (remplacement) ou `DELETE` (suppression) serait détournée ou redondante, l'intention étant déjà nommée par le suffixe.
-> - **Idempotence des actions `POST`** : la plupart des transitions d'état (`:confirm`, `:activate`, `:demote`) — et la quasi-totalité des suppressions métier (`:disband`, `:fire`) — sont idempotentes **côté métier** : rejouées, elles ne changent rien. Mais c'est une propriété **du domaine**, pas du verbe : `POST` n'est pas idempotent au sens HTTP, et aucun intermédiaire (proxy, client à retry) ne peut s'y fier sans connaître le métier. Pour rendre une action rejouable sans risque sur un retry réseau, DORIAX s'appuie donc sur une **clé d'idempotence** portée par la requête (en-tête `Idempotency-Key`, de fait répandu et en cours de standardisation à l'IETF), **et non sur le verbe**. C'est la contrepartie assumée de l'abandon de `DELETE`, qui offrait, lui, une idempotence native au niveau du protocole (voir « Verbes délibérément exclus »).
+> - **Idempotence des actions `POST`** : la plupart des transitions d'état (`:confirm`, `:activate`, `:demote`) — et la quasi-totalité des suppressions métier (`:disband`, `:fire`) — sont idempotentes **côté métier** : rejouées, elles ne changent rien. Mais c'est une propriété **du domaine**, pas du verbe : `POST` n'est pas idempotent au sens HTTP, et aucun intermédiaire (proxy, client à retry) ne peut s'y fier sans connaître le métier. Pour rendre une action rejouable sans risque sur un retry réseau, DORIAX s'appuie donc sur une **clé d'idempotence** portée par la requête (en-tête `Idempotency-Key`, de fait répandu et en cours de standardisation à l'IETF — `draft-ietf-httpapi-idempotency-key-header`), **et non sur le verbe**. C'est la contrepartie assumée de l'abandon de `DELETE`, qui offrait, lui, une idempotence native au niveau du protocole (voir « Verbes délibérément exclus »).
 > - **Toute écriture est nommée** : DORIAX n'utilise ni le `POST /collection` nu, ni `PUT`, ni `DELETE`. Création, modification et suppression prennent toutes la forme `POST /…:{action}` (voir convention ci-dessous).
 
 > **Note sur les `GET` avec body (`POST` utilisé à la place de `GET`) :** _Dans certains cas complexes, un appel `GET` peut nécessiter un payload. Cependant, certaines API REST empêchent de passer un body dans une requête `GET`. Dans ces situations, DORIAX privilégie `POST` pour ces requêtes tout en maintenant une logique métier explicite, afin de favoriser une API au vocabulaire métier explicite plutôt que technique. Ce `POST` est alors une **lecture déguisée** : il doit rester **sûr** (aucun effet de bord) et constitue la **seule exception** à la règle « `POST` ⇒ effet » énoncée plus haut._
@@ -220,7 +220,7 @@ Le séparateur `:` rend déterministe la **nature** du segment — nom ou verbe 
 - **Repli générique toléré, jamais par défaut.** Lorsque le domaine n'offre honnêtement aucun terme spécifique, un verbe générique (`:update`, `:close`…) est acceptable — c'est un dernier recours assumé, pas un choix de facilité. La question à se poser d'abord reste toujours : *le métier a-t-il un mot pour ça ?*
 - **Harmoniser les verbes récurrents, sans liste fermée.** Pour les opérations transverses qui reviennent partout (créer, annuler, archiver…), il est recommandé qu'une équipe tienne un petit lexique de référence, afin d'éviter que `:cancel`, `:annul` et `:void` cohabitent pour une même intention. Ce lexique **guide**, il n'enferme pas : chaque contexte reste libre d'étendre avec son propre vocabulaire métier, qui prime toujours.
 
-> **Note — renommer un verbe, et le rôle de HDL.** _Faire porter l'intention par l'URL crée un couplage : corriger une coquille ou faire évoluer le terme métier change le chemin, et casse donc les clients qui l'ont codé en dur. C'est une rupture de contrat d'API ordinaire, qui se traite par les pratiques habituelles de non-régression : exposer l'ancien chemin en alias, le déprécier, le versionner. Surtout, c'est précisément ce que **HDL** (encore à spécifier) neutralise : un client qui suit les liens hypermédia fournis dans les réponses, au lieu de construire les URL lui-même, absorbe ce changement de manière transparente._
+> **Note — renommer un verbe, et le rôle de HDL.** _Faire porter l'intention par l'URL crée un couplage : corriger une coquille ou faire évoluer le terme métier change le chemin, et casse donc les clients qui l'ont codé en dur. C'est une rupture de contrat d'API ordinaire, qui se traite par les pratiques habituelles de non-régression : exposer l'ancien chemin en alias, le déprécier, le versionner. Surtout, c'est précisément ce que **HDL** neutralise : un client qui suit les liens hypermédia fournis dans les réponses, au lieu de construire les URL lui-même, absorbe ce changement de manière transparente._
 
 #### Convention DORIAX — toute écriture porte un nom métier
 
@@ -264,13 +264,13 @@ Cette section illustre les conventions de DORIAX avec des exemples concrets.
 
 DORIAX suit les standards HTTP pour structurer ses réponses en apportant des précisions métier adaptées. Cette section fournit une vue des différentes réponses HTTP DORIAX, en regroupant les cas d'usage courants.
 
-**Format de représentation.** _Tout corps de réponse d'une API DORIAX (ressource, collection, et autres contenus de succès) suit le format **HDL** (Hypermedia Domain Language), spécifié séparément. HDL est un profil hypermédia bâti sur HAL : il en reprend la structure (`_links`, `self`, `href`) et l'enrichit (méthode HTTP portée par le lien, titres, dépréciations, templates d'URI). Les exemples de payload de cette section n'en utilisent qu'un sous-ensemble — les `_links` de base — et restent donc du HDL valide. La représentation des erreurs suivra également HDL une fois ce volet stabilisé._
+**Format de représentation.** _Tout corps de réponse d'une API DORIAX (ressource, collection, et autres contenus de succès) suit le format **HDL** (Hypermedia Domain Language), spécifié séparément (voir [HDL](README.md)). HDL est un profil hypermédia bâti sur HAL : il en reprend la structure (`_links`, `self`, `href`) et l'enrichit (méthode HTTP portée par le lien, titres, dépréciations, templates d'URI). Les exemples de payload de cette section n'en utilisent qu'un sous-ensemble — les `_links` de base — et restent donc du HDL valide. La représentation des erreurs suit également HDL (voir [Erreurs](doc/errors.md))._
 
 | Opération | Codes HTTP possibles | Contenu du payload |
 |-----------|---------------------|-------------------|
 | **GET** (lecture d'une ressource ou action sûre `:{action}`, ou `POST` remplaçant un `GET` nécessitant un body) | `200 OK`, `403 Forbidden`, `404 Not Found` | Payload contenant la ressource demandée (format HDL) ou une erreur |
-| **POST** — l'action **crée une ressource** (sur une collection `POST /coll:{action}`, ou via un service qui crée) | `201 Created`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | `Location` dans l'en-tête HTTP, et optionnellement un payload (HDL) contenant les liens vers la ressource créée |
-| **POST** — l'action **produit un autre effet** (transition d'état, mutation, **suppression métier**, opération de service ; `:{action}`) | `200 OK`, `202 Accepted`, `204 No Content`, `400 Bad Request`, `403 Forbidden`, `409 Conflict`, `422 Unprocessable Entity` | Aucun payload en cas de `204`, un payload (HDL) en cas de `200`, ou un lien de suivi en cas de `202` (traitement asynchrone) |
+| **POST** — l'action **crée une ressource** (sur une collection `POST /coll:{action}`, ou via un service qui crée) | `201 Created`, `400 Bad Request`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity` | `Location` dans l'en-tête HTTP, et optionnellement un payload (HDL) contenant les liens vers la ressource créée |
+| **POST** — l'action **produit un autre effet** (transition d'état, mutation, **suppression métier**, opération de service ; `:{action}`) | `200 OK`, `202 Accepted`, `204 No Content`, `400 Bad Request`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity` | Aucun payload en cas de `204`, un payload (HDL) en cas de `200`, ou un lien de suivi en cas de `202` (traitement asynchrone) |
 | **Requête asynchrone (`202 Accepted`)** | `202 Accepted`, `400 Bad Request`, `403 Forbidden` | `Location` dans l'en-tête HTTP pour suivre le traitement, et optionnellement un payload (HDL) avec des liens HATEOAS |
 | **Erreur métier (`422 Unprocessable Entity`)** | `422 Unprocessable Entity` | Payload d'erreur en format HDL contenant les détails de l'erreur |
 
@@ -291,7 +291,7 @@ DORIAX suit les standards HTTP pour structurer ses réponses en apportant des pr
 1. **Création réussie :**
    ```http
    HTTP/1.1 201 Created
-   Content-Type: application/json
+   Content-Type: application/hdl+json
 
    {
      "_links": {
@@ -308,7 +308,7 @@ DORIAX suit les standards HTTP pour structurer ses réponses en apportant des pr
 3. **Requête acceptée pour un traitement asynchrone :**
    ```http
    HTTP/1.1 202 Accepted
-   Content-Type: application/json
+   Content-Type: application/hdl+json
 
    {
      "_links": {
@@ -323,25 +323,21 @@ DORIAX suit les standards HTTP pour structurer ses réponses en apportant des pr
 
    ```http
    HTTP/1.1 422 Unprocessable Entity
-   Content-Type: application/json
+   Content-Type: application/problem+json
 
    {
-     "errors": [
-       {
-         "code": "LAST_OWNER_RESTRICTION",
-         "message": "Cannot demote the last owner of the team.",
-         "_links": {
-           "origin": { "href": "/teams/42/members/22:demote", "method": "POST" },
-           "about": { "href": "http://example.com/docs/errors/last-owner-restriction" }
-         }
-       }
-     ]
+     "type": "http://example.com/docs/errors/last-owner-restriction",
+     "title": "Last owner restriction.",
+     "status": 422,
+     "detail": "Cannot demote the last owner of the team.",
+     "instance": "/teams/42/members/22:demote",
+     "code": "LAST_OWNER_RESTRICTION"
    }
    ```
 
-**Note — format d'erreur et standard IETF.** _Le format présenté ici (`{ "errors": [ … ] }`) est un format maison enrichi de liens hypermédia. Le standard IETF pour les erreurs HTTP est la **RFC 9457** (« Problem Details for HTTP APIs », qui a remplacé la RFC 7807 en juillet 2023), avec le média type `application/problem+json` et les champs `type`, `title`, `status`, `detail`, `instance`. DORIAX reste compatible avec ce standard ; le format retenu ici en est une variation délibérée. À défaut d'une bonne raison de diverger, s'aligner sur la RFC 9457 facilite l'interopérabilité et l'outillage. (La spécification complète de la gestion des erreurs reste à définir.)_
+**Note — format d'erreur.** _Les réponses d'erreur DORIAX suivent le **format d'erreur HDL**, un sur-ensemble de la **RFC 9457** (« Problem Details for HTTP APIs », qui a remplacé la RFC 7807 en juillet 2023) servi en `application/problem+json` : il en conserve les champs `type`, `title`, `status`, `detail`, `instance` et les complète d'extensions — code applicatif stable (`code`), erreurs multiples (`errors[]`), liens de reprise (`_links`), métadonnées d'échange (`_metadata`). L'exemple ci-dessus n'en montre qu'une forme simple ; voir [Erreurs](doc/errors.md) pour la spécification complète._
 
-👉 **Référence complète sur les codes HTTP** : [MDN HTTP Response Status Codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status).
+👉 **Référence sur les codes HTTP** : la sémantique normative est définie par la **RFC 9110 §15** ; [MDN HTTP response status codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status) en donne un panorama plus accessible.
 
 ### 3.4 Séparation commande / requête
 
@@ -393,7 +389,7 @@ Pour cette classe, le corps de réponse n'est pas un confort qui éviterait un `
 
 - **`return=minimal` n'y est pas le défaut.** La réponse porte le matériel produit ; un client qui la perd n'a **aucun recours** — aucun `GET` ne le lui rendra. C'est le seul cas où une commande renvoie légitimement une donnée substantielle, et la réserve annoncée en tête de section.
 - **La relecture ne s'applique pas.** Le pattern « écris puis relis » (ci-dessous) suppose un résultat re-lisible ; ici, par construction, il n'y en a pas.
-- **Le corps fait partie du résultat idempotent.** Comme rien ne réexpose la valeur, un rejeu de la même requête (même `Idempotency-Key`, §3.1) doit la **restituer à l'identique** : pour cette classe — et pour elle seule — la réponse est mémorisée et rejouée *verbatim*. Le détail du mécanisme relève de la spécification d'idempotence ; do-rest se borne à poser que, pour ces écritures, le corps est constitutif de l'issue.
+- **Le corps fait partie du résultat idempotent.** Comme rien ne réexpose la valeur, un rejeu de la même requête (même `Idempotency-Key`, §3.1) doit la **restituer à l'identique** : pour cette classe — et pour elle seule — la réponse est mémorisée et rejouée *verbatim*. Le détail du mécanisme relève de la spécification d'idempotence ; DORIAX se borne à poser que, pour ces écritures, le corps est constitutif de l'issue.
 
 **Cadrage.** DORIAX traite ce cas comme une **exception nommée et bornée** à la règle d'écriture, et non en le requalifiant en service (§2.2) : ouvrir la voie « service » à toute écriture désireuse de renvoyer un corps réintroduirait le couplage action↔représentation que la §3.4 écarte. La question à se poser d'abord reste : *cette valeur est-elle réellement non reconstructible par une lecture ?* Si une lecture peut la rendre, l'écriture suit le défaut — minimal, puis `GET`.
 
@@ -403,4 +399,4 @@ La règle « écris, puis relis » suppose deux choses. D'abord que le résultat
 
 #### Et HDL
 
-C'est ici aussi que **HDL** (encore à spécifier) referme le sujet proprement. Plutôt que de laisser le client *deviner* quelle URL relire après une écriture, la réponse lui fournit les **liens** vers ce qu'il peut consulter ou faire ensuite : la relecture devient un lien donné par le serveur, pas une URL reconstruite côté client. La séparation commande/requête et HDL répondent ainsi au même manque.
+C'est ici aussi que [HDL](../README.md) referme le sujet proprement. Plutôt que de laisser le client *deviner* quelle URL relire après une écriture, la réponse lui fournit les **liens** vers ce qu'il peut consulter ou faire ensuite : la relecture devient un lien donné par le serveur, pas une URL reconstruite côté client. La séparation commande/requête et HDL répondent ainsi au même manque.
