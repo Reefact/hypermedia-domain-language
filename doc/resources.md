@@ -16,16 +16,25 @@ Au sein d'une ressource, un objet imbriqué est soit de la **donnée**, soit une
 
 > **À ne pas confondre —** le critère n'est *pas* la frontière d'agrégat du DDD tactique, ni « donnée intrinsèque vs donnée référencée ». C'est l'adressabilité, et elle se lit d'un coup d'œil : **un `self`, ou pas de `self`**.
 
-## `self` : le marqueur de projection
+## `self` : l'identité navigable
 
-La présence d'un `self` porte deux informations à la fois :
+La présence d'un `self` signale une seule chose : l'objet est une **ressource navigable** dans la représentation courante — on peut rejoindre son URI. Elle ne dit **rien** de la *nature* de cette relation : qu'il s'agisse d'un composant livré avec le parent, d'une ressource liée d'un autre agrégat, d'une projection partielle ou d'un fragment d'un modèle interne, HDL les représente de la même façon — un objet sous son nom métier, marqué d'un `self`. Cette absence de distinction est **volontaire** : **HDL décrit une représentation exposée au client, pas l'architecture interne du système**. Le nom du champ exprime le **rôle métier** de l'objet dans la représentation ; le `self`, son **identité navigable**.
 
-- un objet **sans** `self` est une **donnée complète** et autoritative : il n'y a rien d'autre à aller chercher ;
-- un objet **avec** `self` est une **projection** d'une ressource adressable : il en expose la part utile au contexte, et son `self` signale qu'il existe davantage à cette URI — d'autres propriétés, des actions.
+```json
+{
+  "numeroCommande": "CMD-2024-5821",
+  "client": {
+    "nom": "Camille Durand",
+    "_links": { "self": { "href": "/clients/9" } }
+  }
+}
+```
 
-Un seul signal porte donc ce que HAL répartissait entre `_embedded` (« ceci est une ressource ») et le caractère potentiellement partiel d'une représentation embarquée (« ceci peut être incomplet »).
+HDL ne dit pas ici que le client *appartient* à la commande, ni qu'il en partage le cycle de vie. Il dit seulement que, dans la représentation d'une commande, un objet métier nommé `client` est présent, et qu'on peut le rejoindre par son URI. Les règles de cycle de vie, de modification, de suppression ou de cohérence ne sont pas portées par la structure JSON : elles le sont par les liens disponibles, les actions exposées et la documentation du domaine.
 
-> **En clair —** inutile de marquer qu'une représentation est partielle : son `self` le dit. Pas de `self`, c'est complet ; un `self`, va voir si tu veux le reste.
+En **corollaire**, le `self` porte aussi la complétude : un objet **sans** `self` est une **donnée complète** et autoritative — rien d'autre à aller chercher ; un objet **avec** `self` peut n'être que **partiel**, l'autorité restant à son URI. Un seul signal réunit ainsi ce que HAL répartissait entre `_embedded` (« ceci est une ressource ») et le caractère potentiellement incomplet d'une représentation embarquée.
+
+> **En clair —** pas de `self`, c'est complet et c'est de la donnée ; un `self`, c'est navigable et peut-être partiel — va voir à l'URI si tu veux le reste.
 
 ## Sous-ressources et actions
 
@@ -112,7 +121,7 @@ Au fond, les deux formats ne diffèrent pas par la validité mais par la **prior
 
 Parce que HDL s'écarte ainsi du modèle de HAL, il porte son **propre type de média** : `application/hdl+json`, et non `application/hal+json`. Un client HAL parserait le JSON sans erreur, mais lirait les sous-ressources comme de l'**état opaque**, pas comme des ressources. Le type de média annonce donc la bonne grille de lecture : en HDL, c'est le `self` qui marque une sous-ressource, jamais un compartiment `_embedded`.
 
-Ce choix d'imbrication existe d'ailleurs « dans la nature », mais **non assumé**. L'API IIS Administration de Microsoft sert du `application/hal+json` tout en imbriquant ses ressources liées — un pool d'applications au sein d'un site web — comme des propriétés d'état portant leur propre `self`, sans jamais recourir à `_embedded` ni nommer l'écart. HDL fait le même choix d'affichage, plus proche du métier que du protocole ; il le **nomme et le justifie**, là où d'autres le pratiquent en silence.
+Ce choix d'imbrication existe d'ailleurs « dans la nature », mais **non assumé**. L'[API IIS Administration de Microsoft](https://learn.microsoft.com/en-us/iis-administration/api/hal) sert du `application/hal+json` tout en imbriquant ses ressources liées — un pool d'applications au sein d'un site web — comme des propriétés d'état portant leur propre `self`, sans jamais recourir à `_embedded` ni nommer l'écart. HDL fait le même choix d'affichage, plus proche du métier que du protocole ; il le **nomme et le justifie**, là où d'autres le pratiquent en silence.
 
 ## Pas de CURIEs
 
@@ -130,8 +139,8 @@ Les relations standard (`self`, `next`, `prev`, `first`, `last`) conservent leur
 | Value object / entité interne sans identité | propriété imbriquée | pas de `self` |
 | Sous-ressource adressable | objet sous son nom métier | `_links.self` |
 | Ressource d'un autre agrégat, référencée | lien | `_links.<rel>` |
-| Ressource d'un autre agrégat, inlinée (perf) | objet sous son nom métier | `_links.self` (projection) |
+| Ressource d'un autre agrégat, inlinée (perf) | objet sous son nom métier | `_links.self` (partielle) |
 
-Règle unique : **pas de `self`, c'est une donnée complète ; un `self`, c'est une sous-ressource — la projection d'une ressource adressable.** Aucun compartiment `_embedded`.
+Règle unique : **pas de `self`, c'est une donnée complète ; un `self`, c'est une ressource navigable, dont la représentation peut être partielle.** Aucun compartiment `_embedded`.
 
 Pour un *plusieurs* : **tableau inline** sous son nom métier si c'est un composant borné de la ressource ; **lien** vers une collection-ressource (filtrée au besoin) si ce sont des entités autonomes. Jamais de pagination sur un tableau inline.
