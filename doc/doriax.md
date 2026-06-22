@@ -6,7 +6,11 @@
 
 DORIAX (**Domain-Oriented Representation for Inter-Application eXchanges**) est une approche pragmatique basée sur l'architecture REST, conçue pour mieux refléter les concepts métier dans les API. Contrairement à REST classique, souvent limité à des opérations CRUD (Create, Read, Update, Delete), DORIAX introduit une distinction claire entre **ressources** et **services**, et permet l'exposition explicite d'**actions métier** sous forme d'endpoints dédiés.
 
-L'objectif principal de DORIAX est de rendre les API plus naturelles à utiliser, en évitant de tordre REST pour répondre aux besoins métier. Il s'appuie sur les principes fondamentaux de REST tout en intégrant des concepts issus du DDD (Domain-Driven Design) et du CQRS (Command Query Responsibility Segregation), sans pour autant les imposer.
+L'objectif principal de DORIAX est de rendre les API plus naturelles à utiliser, en évitant de tordre REST pour répondre aux besoins métier. Il s'appuie sur les principes fondamentaux de REST tout en intégrant des concepts issus du DDD (Domain-Driven Design), sans pour autant l'imposer.
+
+DORIAX vise les **domaines riches en logique métier** : ceux où une écriture fait plus que renseigner un champ. Elle déclenche des effets que le serveur orchestre — un changement d'état, des notifications, une règle à respecter — et le métier a un *mot* pour ce qui se passe : confirmer, dissoudre, intégrer. C'est là que DORIAX paie : sa règle « toute écriture porte un nom métier » (§3.1) suppose justement que ce mot existe.
+
+À l'inverse, ce qui relève du simple **CRUD** — des données plates qu'on crée, lit et met à jour sans logique particulière — reste mieux servi par REST « plat » : DORIAX n'y apporterait que de la cérémonie (un `:update` générique là où un `PATCH` suffit). La frontière n'est d'ailleurs pas l'application entière, mais l'opération : la plupart des systèmes mélangent les deux. DORIAX n'a pas vocation à remplacer REST partout — il prend le relais là où le métier a quelque chose à dire, et lui laisse la place ailleurs.
 
 DORIAX assume cependant un écart vis-à-vis de REST « pur » au sens de Fielding : exposer des verbes métier dans l'URL relève d'un hybride pragmatique entre REST et RPC-over-HTTP. DORIAX conserve ce qui a une vraie valeur opérationnelle dans REST — en particulier la seule distinction de verbe qui change quelque chose pour l'infrastructure : **lecture sûre (`GET`) contre effet (`POST`)** — sans s'imposer la pureté de l'interface uniforme ou de l'hypermédia.
 
