@@ -4,43 +4,11 @@
 
 ### 1.1 Qu'est-ce que DORIAX ?
 
-DORIAX (**Domain-Oriented Representation for Inter-Application eXchanges**) est une approche pragmatique basée sur l'architecture REST, conçue pour mieux refléter les concepts métier dans les API. Contrairement à REST classique, souvent limité à des opérations CRUD (Create, Read, Update, Delete), DORIAX introduit une distinction claire entre **ressources** et **services**, et permet l'exposition explicite d'**actions métier** sous forme d'endpoints dédiés.
+DORIAX (**Domain-Oriented Representation for Inter-Application eXchanges**) est une **grammaire d'API** orientée métier, bâtie sur REST. Elle distingue **ressources**, **services** et **actions**, et impose que **toute écriture porte un nom métier** exposé dans l'URL (`POST /orders/{id}:confirm`) plutôt que d'être déduite de la seule méthode HTTP. Côté verbes, DORIAX n'en garde que deux — `GET` pour ce qui lit, `POST` pour ce qui écrit —, soit la seule distinction qui change quelque chose pour l'infrastructure : **lecture sûre contre effet**.
 
-L'objectif principal de DORIAX est de rendre les API plus naturelles à utiliser, en évitant de tordre REST pour répondre aux besoins métier. Il s'appuie sur les principes fondamentaux de REST tout en intégrant des concepts issus du DDD (Domain-Driven Design), sans pour autant l'imposer.
+C'est donc un hybride assumé : le **modèle de ressources** de REST (adressage hiérarchique, discipline `GET`/`POST`) augmenté de la **méthode nommée** du RPC. DORIAX se marie avec **HDL**, le profil hypermédia de ses réponses (spécifié à part, voir [HDL](README.md)), qui découple le client des URL en lui fournissant les liens à suivre plutôt qu'en le laissant les construire.
 
-DORIAX vise les **domaines riches en logique métier** : ceux où une écriture fait plus que renseigner un champ. Elle déclenche des effets que le serveur orchestre — un changement d'état, des notifications, une règle à respecter — et le métier a un *mot* pour ce qui se passe : confirmer, dissoudre, intégrer. C'est là que DORIAX paie : sa règle « toute écriture porte un nom métier » (§3.1) suppose justement que ce mot existe.
-
-À l'inverse, ce qui relève du simple **CRUD** — des données plates qu'on crée, lit et met à jour sans logique particulière — reste mieux servi par REST « plat » : DORIAX n'y apporterait que de la cérémonie (un `:update` générique là où un `PATCH` suffit). La frontière n'est d'ailleurs pas l'application entière, mais l'opération : la plupart des systèmes mélangent les deux. DORIAX n'a pas vocation à remplacer REST partout — il prend le relais là où le métier a quelque chose à dire, et lui laisse la place ailleurs.
-
-DORIAX assume cependant un écart vis-à-vis de REST « pur » au sens de Fielding : exposer des verbes métier dans l'URL relève d'un hybride pragmatique entre REST et RPC-over-HTTP. DORIAX conserve ce qui a une vraie valeur opérationnelle dans REST — en particulier la seule distinction de verbe qui change quelque chose pour l'infrastructure : **lecture sûre (`GET`) contre effet (`POST`)** — sans s'imposer la pureté de l'interface uniforme ou de l'hypermédia.
-
-DORIAX est pensé pour aller de pair avec **HDL**, le format hypermédia de ses réponses (spécifié à part, voir [HDL](README.md)) : un client qui suit les liens renvoyés par le serveur, au lieu de figer les URL en dur, absorbe sans heurt les évolutions de chemins — un renommage d'action devient ainsi transparent (§3.1). Ce n'est pas la pureté de Fielding, mais son usage pragmatique, et le complément naturel de la grammaire : puisque DORIAX inscrit l'intention dans l'URL, c'est HDL qui en découple le client. Le cœur de DORIAX — grammaire d'URL, discipline `GET`/`POST`, écritures nommées — vaut toutefois indépendamment, et rien n'interdit une adoption en deux temps : la grammaire d'abord, l'hypermédia ensuite. On ne diffère alors qu'un confort — sans suivi de liens, un changement de chemin redevient une rupture de contrat ordinaire, traitée comme partout (alias, dépréciation, version).
-
-### 1.2 Pourquoi DORIAX ?
-
-REST est devenu le standard de facto pour la conception d'API web, mais son implémentation traditionnelle repose principalement sur une logique CRUD, où chaque entité est exposée sous forme de ressource manipulable via `GET`, `POST`, `PUT` et `DELETE`. Si cette approche fonctionne bien pour des systèmes simples, elle montre vite ses limites dans les applications métier plus riches.
-
-**REST impose une approche CRUD inadaptée aux actions métier**
-
-Une API REST classique force souvent à modifier une ressource via `PUT` ou `PATCH`, même lorsque le changement d'état résulte d'une action métier spécifique. Par exemple, une action comme confirmer une commande (`confirm-order`) ne se résume pas à modifier un champ `status`. D'autres mises à jour peuvent être nécessaires, comme la mise à jour de la date de confirmation, la réservation de stock ou l'envoi d'une notification.
-
-Avec un modèle CRUD strict, l'appelant doit connaître et gérer ces modifications en passant manuellement tous les champs affectés (`PATCH /orders/42` avec un body `{ "status": "confirmed", "confirmedAt": "2025-02-11T10:00:00Z", "stockReserved": true }`). Cela introduit un **problème majeur** : une partie de la logique métier se retrouve dans l'appelant, alors qu'elle devrait être entièrement gérée côté backend.
-
-DORIAX résout ce problème en exposant des actions métier explicites (`POST /orders/42:confirm`), ce qui permet au backend de prendre en charge tous les effets métier associés, sans que le client ait à les connaître.
-
-**REST ne distingue pas clairement Ressources et Services**
-
-Dans une API REST classique, tout est souvent exposé sous forme de ressources, même lorsqu'il s'agit d'un processus métier. Cette confusion mène à des conceptions incohérentes où des services métier sont représentés comme des entités factices (`POST /commands` ou `POST /actions`), ce qui brouille la lisibilité de l'API.
-
-DORIAX clarifie cette distinction :
-- Une **ressource** représente un élément du domaine, potentiellement composé de plusieurs entités sous-jacentes.
-- Un **service** exécute une logique métier sans persister d'état. Il est accessible via `GET` (lecture seule) ou `POST` (avec effet).
-
-**REST gère mal les workflows complexes**
-
-Dans REST standard, plusieurs chemins peuvent mener au même état final, mais chacun peut avoir des effets de bord différents. Cette flexibilité conduit à des API où la modification d'un statut (`PATCH`) ou l'exécution d'une action (`POST /commands`) ne décrivent pas explicitement ce qui se passe côté métier.
-
-Avec DORIAX, chaque action ayant un impact sur l'état métier est clairement identifiée (`POST /teams/42/members:onboard`). Il n'y a pas d'ambiguïté sur quelle opération est effectuée et quels effets secondaires sont pris en charge par le backend. Cela évite aux clients de devoir comprendre la logique métier interne et simplifie la gestion des workflows.
+> **Quand et pourquoi employer DORIAX ?** _Sur quels domaines il vaut le coup, pourquoi REST « plat » suffit ailleurs, et comment les deux cohabitent sur une même API au niveau de chaque **ressource** : voir le guide d'introduction, [Concevoir une API métier](conception-api.md). Le présent document est la **spécification** de la grammaire ; il est recommandé de lire le guide d'abord._
 
 ## 2. Ressources, Services et Actions
 
